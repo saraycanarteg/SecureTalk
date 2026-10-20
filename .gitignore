@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Secretos y entorno
+.env
+*.env
+!.env.example
+secrets/
+
+# Datasets de evaluación
+stego-api/dataset/
+
+# IDE
+.vscode/
+.idea/

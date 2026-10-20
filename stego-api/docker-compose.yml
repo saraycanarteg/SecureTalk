@@ -1,0 +1,31 @@
+# Contenedor de análisis aislado (RS-14): red interna sin salida a Internet,
+# sistema de archivos de solo lectura, sin privilegios y con recursos limitados.
+services:
+  stego-api:
+    build: .
+    image: securetalk/stego-api:0.1.0
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    environment:
+      STEGO_INTERNAL_TOKEN_FILE: /run/secrets/stego_internal_token
+      STEGO_MAX_FILE_SIZE_MB: 10
+    secrets:
+      - stego_internal_token
+    networks:
+      - analysis
+
+networks:
+  analysis:
+    internal: true
+
+secrets:
+  stego_internal_token:
+    file: ./secrets/stego_internal_token.txt

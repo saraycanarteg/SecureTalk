@@ -1,0 +1,12 @@
+# Solo para desarrollo: expone el puerto 8001 al host para probar con curl/Swagger.
+# Uso: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+services:
+  stego-api:
+    ports:
+      - "127.0.0.1:8001:8001"
+    networks:
+      - analysis
+      - dev
+
+networks:
+  dev: {}
