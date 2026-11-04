@@ -1,0 +1,19 @@
+# Postgres desechable para las pruebas e2e: sin volumen, los datos viven en memoria.
+name: securetalk-test
+
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: securetalk_test
+      POSTGRES_PASSWORD: solo_para_pruebas
+      POSTGRES_DB: securetalk_test
+    ports:
+      - '127.0.0.1:5433:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U securetalk_test -d securetalk_test']
+      interval: 2s
+      timeout: 3s
+      retries: 15

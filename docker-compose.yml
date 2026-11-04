@@ -30,6 +30,21 @@ services:
       DB_USERNAME: ${POSTGRES_USER:?definir en .env}
       DB_PASSWORD: ${POSTGRES_PASSWORD:?definir en .env}
       DB_DATABASE: ${POSTGRES_DB:?definir en .env}
+      JWT_PRIVATE_KEY_PATH: /run/keys/jwt_private.pem
+      JWT_PUBLIC_KEY_PATH: /run/keys/jwt_public.pem
+    volumes:
+      - type: bind
+        source: ./keys/jwt_private.pem
+        target: /run/keys/jwt_private.pem
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./keys/jwt_public.pem
+        target: /run/keys/jwt_public.pem
+        read_only: true
+        bind:
+          create_host_path: false
     ports:
       - '127.0.0.1:${AUTH_PORT:-3001}:3001'
     depends_on:
@@ -47,6 +62,15 @@ services:
         required: false
     environment:
       PORT: 3002
+      JWT_PUBLIC_KEY_PATH: /run/keys/jwt_public.pem
+    volumes:
+      # STEGO solo recibe la llave publica.
+      - type: bind
+        source: ./keys/jwt_public.pem
+        target: /run/keys/jwt_public.pem
+        read_only: true
+        bind:
+          create_host_path: false
     ports:
       - '127.0.0.1:${STEGO_PORT:-3002}:3002'
     networks:

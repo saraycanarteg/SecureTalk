@@ -60,6 +60,31 @@ export const envSchema = z.object({
     .positive()
     .default(100),
 
+  JWT_PRIVATE_KEY_PATH: z
+    .string()
+    .min(1),
+
+  JWT_PUBLIC_KEY_PATH: z
+    .string()
+    .min(1),
+
+  JWT_ISSUER: z
+    .string()
+    .min(1)
+    .default('securetalk-auth'),
+
+  JWT_AUDIENCE: z
+    .string()
+    .min(1)
+    .default('securetalk-api'),
+
+  JWT_EXPIRES_IN_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(900)
+    .default(900),
+
   RATE_LIMIT_BLOCK_MS: z.coerce
     .number()
     .int()
@@ -73,7 +98,7 @@ export type Env = z.infer<typeof envSchema>;
 export const seedEnvSchema = z.object({
   SEED_ADMIN_USERNAME: z.string().min(1).max(50),
   SEED_ADMIN_EMAIL: z.email().max(150),
-  SEED_ADMIN_PASSWORD: z.string().min(12),
+  SEED_ADMIN_PASSWORD: z.string().min(12).max(128),
   SEED_ADMIN_CEDULA: z.string().regex(/^[0-9]{10}$/),
   SEED_ADMIN_NOMBRES: z.string().min(1).max(100),
   SEED_ADMIN_APELLIDOS: z.string().min(1).max(100),

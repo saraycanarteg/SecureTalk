@@ -1,8 +1,11 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 
+import { AppModule } from './app.module';
+import { AuthModule } from './auth/auth.module';
 import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware.js';
 import type { Env } from './config/env.schema.js';
 
@@ -35,4 +38,23 @@ export function configureApp(app: NestExpressApplication): void {
       transform: true,
     }),
   );
+
+  if (config.get('NODE_ENV', { infer: true }) !== 'production') {
+    setupSwagger(app);
+  }
+}
+
+// Solo documenta lo implementado: los modulos de users y roles aun no se incluyen.
+function setupSwagger(app: NestExpressApplication): void {
+  const document = SwaggerModule.createDocument(
+    app,
+    new DocumentBuilder()
+      .setTitle('SecureTalk AUTH')
+      .setDescription('Autenticacion con Argon2id y JWT firmado con EdDSA (Ed25519)')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build(),
+    { include: [AppModule, AuthModule] },
+  );
+  SwaggerModule.setup('api/docs', app, document);
 }

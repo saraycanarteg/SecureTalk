@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { AuthModule } from './auth/auth.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions/all-exceptions.filter';
 import { validateEnv } from './config/env.schema.js';
 import type { Env } from './config/env.schema.js';
@@ -44,6 +45,7 @@ import { UserRolesModule } from './user-roles/user-roles.module';
         ],
       }),
     }),
+    AuthModule,
     UsersModule,
     RolesModule,
     UserRolesModule,
