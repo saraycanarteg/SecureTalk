@@ -1,0 +1,62 @@
+name: securetalk
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?definir en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?definir en .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - auth_db
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth-service:
+    build: ./auth-service
+    restart: unless-stopped
+    env_file:
+      - ./auth-service/.env
+    environment:
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${POSTGRES_USER:?definir en .env}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?definir en .env}
+      DB_DATABASE: ${POSTGRES_DB:?definir en .env}
+    ports:
+      - '127.0.0.1:${AUTH_PORT:-3001}:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - auth_db
+      - services
+
+  stego-service:
+    build: ./stego-service
+    restart: unless-stopped
+    env_file:
+      - path: ./stego-service/.env
+        required: false
+    environment:
+      PORT: 3002
+    ports:
+      - '127.0.0.1:${STEGO_PORT:-3002}:3002'
+    networks:
+      - services
+
+networks:
+  # Solo auth-service y postgres: STEGO no puede alcanzar la base de datos.
+  auth_db:
+    internal: true
+  services:
+
+volumes:
+  postgres_data:
