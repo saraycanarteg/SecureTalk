@@ -17,3 +17,19 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  stego-db-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: securetalk_stego_test
+      POSTGRES_PASSWORD: solo_para_pruebas
+      POSTGRES_DB: securetalk_stego_test
+    ports:
+      - '127.0.0.1:5434:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U securetalk_stego_test -d securetalk_stego_test']
+      interval: 2s
+      timeout: 3s
+      retries: 15

@@ -11,13 +11,13 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES2023",
-    "types": ["node"],
+    "types": ["node", "jest", "multer"],
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "incremental": true,
     "skipLibCheck": true,
-    "strict": true
-  },
-  "include": ["src"]
+    "strict": true,
+    "strictPropertyInitialization": false
+  }
 }

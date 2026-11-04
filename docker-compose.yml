@@ -54,16 +54,43 @@ services:
       - auth_db
       - services
 
+  stego-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${STEGO_POSTGRES_USER:?definir en .env}
+      POSTGRES_PASSWORD: ${STEGO_POSTGRES_PASSWORD:?definir en .env}
+      POSTGRES_DB: ${STEGO_POSTGRES_DB:?definir en .env}
+    volumes:
+      - stego_db_data:/var/lib/postgresql/data
+    networks:
+      - stego_db
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   stego-service:
     build: ./stego-service
     restart: unless-stopped
     env_file:
-      - path: ./stego-service/.env
-        required: false
+      - ./stego-service/.env
     environment:
       PORT: 3002
+      DB_HOST: stego-db
+      DB_PORT: 5432
+      DB_USERNAME: ${STEGO_POSTGRES_USER:?definir en .env}
+      DB_PASSWORD: ${STEGO_POSTGRES_PASSWORD:?definir en .env}
+      DB_DATABASE: ${STEGO_POSTGRES_DB:?definir en .env}
       JWT_PUBLIC_KEY_PATH: /run/keys/jwt_public.pem
+      AUTH_BASE_URL: http://auth-service:3001
+      UPLOAD_DIR: /app/uploads
+    depends_on:
+      stego-db:
+        condition: service_healthy
     volumes:
+      - stego_uploads:/app/uploads
       # STEGO solo recibe la llave publica.
       - type: bind
         source: ./keys/jwt_public.pem
@@ -74,13 +101,19 @@ services:
     ports:
       - '127.0.0.1:${STEGO_PORT:-3002}:3002'
     networks:
+      - stego_db
       - services
 
 networks:
   # Solo auth-service y postgres: STEGO no puede alcanzar la base de datos.
   auth_db:
     internal: true
+  # Solo stego-service y stego-db: AUTH no puede alcanzar la base de STEGO.
+  stego_db:
+    internal: true
   services:
 
 volumes:
   postgres_data:
+  stego_db_data:
+  stego_uploads:
