@@ -89,6 +89,16 @@ describe('/api/roles (e2e)', () => {
       expect(second.body.data[0].rol).toBe('SOPORTE');
     });
 
+    it.each(['page=1e300', 'page=1000001'])('responde 400 con %s', async (query) => {
+      await server().get(`/api/roles?${query}`).expect(400);
+    });
+
+    it('acepta la pagina maxima aunque este vacia', async () => {
+      const res = await server().get('/api/roles?page=1000000').expect(200);
+
+      expect(res.body.data).toEqual([]);
+    });
+
     it('responde 400 con una paginacion invalida', async () => {
       await server().get('/api/roles?limit=101').expect(400);
     });

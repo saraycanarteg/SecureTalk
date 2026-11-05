@@ -141,7 +141,7 @@ describe('/api/users (e2e)', () => {
       expect(res.body.data).toHaveLength(1);
     });
 
-    it.each(['page=0', 'limit=0', 'limit=101', 'page=abc'])('responde 400 con %s', async (query) => {
+    it.each(['page=0', 'limit=0', 'limit=101', 'page=abc', 'page=1e300', 'page=1000001'])('responde 400 con %s', async (query) => {
       await admin().get(`/api/users?${query}`).expect(400);
     });
   });
