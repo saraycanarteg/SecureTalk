@@ -89,12 +89,35 @@ export const envSchema = z.object({
     .string()
     .min(32),
 
+  INTERNAL_TLS_CERT_PATH: z
+    .string()
+    .min(1)
+    .optional(),
+
+  INTERNAL_TLS_KEY_PATH: z
+    .string()
+    .min(1)
+    .optional(),
+
+  INTERNAL_TLS_PORT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .default(3443),
+
   RATE_LIMIT_BLOCK_MS: z.coerce
     .number()
     .int()
     .positive()
     .default(60000),
-});
+}).refine(
+  (env) => Boolean(env.INTERNAL_TLS_CERT_PATH) === Boolean(env.INTERNAL_TLS_KEY_PATH),
+  {
+    path: ['INTERNAL_TLS_CERT_PATH'],
+    message: 'el certificado y su llave se configuran juntos',
+  },
+);
 
 export type Env = z.infer<typeof envSchema>;
 

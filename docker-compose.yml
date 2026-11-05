@@ -32,6 +32,8 @@ services:
       DB_DATABASE: ${POSTGRES_DB:?definir en .env}
       JWT_PRIVATE_KEY_PATH: /run/keys/jwt_private.pem
       JWT_PUBLIC_KEY_PATH: /run/keys/jwt_public.pem
+      INTERNAL_TLS_CERT_PATH: /run/keys/auth.crt
+      INTERNAL_TLS_KEY_PATH: /run/keys/auth.key
     volumes:
       - type: bind
         source: ./keys/jwt_private.pem
@@ -45,6 +47,19 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      - type: bind
+        source: ./keys/internal/auth.crt
+        target: /run/keys/auth.crt
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./keys/internal/auth.key
+        target: /run/keys/auth.key
+        read_only: true
+        bind:
+          create_host_path: false
+    # El puerto HTTPS interno no se publica: solo STEGO lo alcanza por la red services.
     ports:
       - '127.0.0.1:${AUTH_PORT:-3001}:3001'
     depends_on:

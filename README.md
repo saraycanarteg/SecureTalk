@@ -18,8 +18,9 @@ cp auth-service/.env.example auth-service/.env
 cp stego-service/.env.example stego-service/.env
 # STEGO_SERVICE_KEY debe tener el mismo valor en ambos servicios y al menos 32 caracteres.
 
-# 2. Llaves Ed25519 para firmar y verificar los JWT
+# 2. Llaves Ed25519 de los JWT y certificado del canal interno entre servicios
 node scripts/generate-jwt-keys.mjs
+node scripts/generate-internal-cert.mjs
 
 # 3. Levantar los servicios
 docker compose up -d --build

@@ -6,6 +6,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
 import type { Env } from './config/env.schema.js';
+import { startInternalTlsServer } from './internal-authorization/internal-tls.server';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -13,6 +14,7 @@ async function bootstrap() {
 
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   await app.listen(config.get('PORT', { infer: true }));
+  await startInternalTlsServer(app);
 }
 
 bootstrap().catch((error: Error) => {
