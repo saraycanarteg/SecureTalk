@@ -117,6 +117,12 @@ export const envSchema = z.object({
     path: ['INTERNAL_TLS_CERT_PATH'],
     message: 'el certificado y su llave se configuran juntos',
   },
+).refine(
+  (env) => env.NODE_ENV !== 'production' || Boolean(env.INTERNAL_TLS_CERT_PATH),
+  {
+    path: ['INTERNAL_TLS_CERT_PATH'],
+    message: 'obligatorio con NODE_ENV=production',
+  },
 );
 
 export type Env = z.infer<typeof envSchema>;

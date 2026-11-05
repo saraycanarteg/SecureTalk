@@ -99,7 +99,9 @@ services:
       DB_PASSWORD: ${STEGO_POSTGRES_PASSWORD:?definir en .env}
       DB_DATABASE: ${STEGO_POSTGRES_DB:?definir en .env}
       JWT_PUBLIC_KEY_PATH: /run/keys/jwt_public.pem
-      AUTH_BASE_URL: http://auth-service:3001
+      # HTTPS con el certificado de AUTH: la clave de servicio y el JWT no viajan en claro.
+      AUTH_BASE_URL: https://auth-service:3443
+      NODE_EXTRA_CA_CERTS: /run/keys/auth.crt
       UPLOAD_DIR: /app/data/uploads
       QUARANTINE_DIR: /app/data/quarantine
     depends_on:
@@ -107,6 +109,13 @@ services:
         condition: service_healthy
     volumes:
       - stego_data:/app/data
+      # STEGO solo recibe el certificado, nunca su llave privada.
+      - type: bind
+        source: ./keys/internal/auth.crt
+        target: /run/keys/auth.crt
+        read_only: true
+        bind:
+          create_host_path: false
       # STEGO solo recibe la llave publica.
       - type: bind
         source: ./keys/jwt_public.pem

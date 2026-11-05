@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
+import type { TLSSocket } from 'node:tls';
 
 import {
   CanActivate,
@@ -23,6 +24,13 @@ export class ServiceKeyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<Request & { requestId?: string }>();
     const provided = req.headers['x-service-key'];
+
+    // En produccion la clave y el JWT nunca se aceptan por un canal sin cifrar.
+    const encrypted = (req.socket as TLSSocket).encrypted === true;
+    if (this.config.get('NODE_ENV', { infer: true }) === 'production' && !encrypted) {
+      this.logger.warn(`servicio_rechazado motivo=canal_sin_tls ip=${req.ip} requestId=${req.requestId}`);
+      throw new UnauthorizedException('Servicio no autenticado');
+    }
 
     if (typeof provided !== 'string' || !this.matches(provided)) {
       // El valor recibido nunca se registra: podria ser una clave casi correcta.

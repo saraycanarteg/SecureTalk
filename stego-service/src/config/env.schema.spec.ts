@@ -27,6 +27,13 @@ describe('validateEnv', () => {
     ).toThrow(/AUTHZ_MODE/);
   });
 
+  it('en produccion exige HTTPS hacia AUTH', () => {
+    expect(() => validateEnv({ ...base, NODE_ENV: 'production' })).toThrow(/AUTH_BASE_URL/);
+    expect(() =>
+      validateEnv({ ...base, NODE_ENV: 'production', AUTH_BASE_URL: 'https://auth-service:3443' }),
+    ).not.toThrow();
+  });
+
   it('permite AUTHZ_MODE=mock en desarrollo', () => {
     expect(
       validateEnv({ ...base, NODE_ENV: 'development', AUTHZ_MODE: 'mock' }).AUTHZ_MODE,

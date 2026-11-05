@@ -29,6 +29,12 @@ La llave privada existe solo en AUTH. STEGO recibe únicamente la llave pública
 
 La ruta no lleva el prefijo `/api`.
 
+### Canal seguro
+
+En Docker, STEGO llama a `https://auth-service:3443`, un puerto que solo existe en la red interna. El certificado se genera con `node scripts/generate-internal-cert.mjs` y STEGO solo recibe su parte pública, con la que verifica la identidad de AUTH. Si no puede verificarla, no obtiene una decisión y responde 503.
+
+Con `NODE_ENV=production`, AUTH rechaza con 401 las llamadas a este endpoint que no lleguen por HTTPS y STEGO no arranca si `AUTH_BASE_URL` no usa `https`. Fuera de producción, AUTH también acepta HTTP en su puerto público para las pruebas manuales.
+
 ### Autenticación de STEGO ante AUTH
 
 Cabecera `X-Service-Key: <STEGO_SERVICE_KEY>`. El valor es un secreto compartido de al menos 32 caracteres, configurado en ambos servicios. AUTH debe:
@@ -126,7 +132,3 @@ La respuesta de éxito sigue el Anexo C:
 ## Modo de desarrollo
 
 Con `AUTHZ_MODE=mock`, STEGO permite la operación si el JWT es válido, sin consultar a AUTH, y avisa en el log al arrancar. Con `NODE_ENV=production` el servicio se niega a arrancar en este modo.
-
-## Pendiente
-
-- **Canal seguro:** la sección 2.4 lo exige, pero hoy la llamada usa HTTP dentro de la red de Docker. La clave de servicio y el JWT viajan sin cifrar por esa red hasta que se configure TLS o mTLS.

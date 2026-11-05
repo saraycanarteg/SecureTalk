@@ -105,6 +105,12 @@ export const envSchema = z.object({
     message: 'mock no esta permitido con NODE_ENV=production',
   },
 ).refine(
+  (env) => env.NODE_ENV !== 'production' || env.AUTH_BASE_URL.startsWith('https://'),
+  {
+    path: ['AUTH_BASE_URL'],
+    message: 'debe usar https con NODE_ENV=production',
+  },
+).refine(
   (env) => resolve(env.UPLOAD_DIR) !== resolve(env.QUARANTINE_DIR),
   {
     path: ['QUARANTINE_DIR'],

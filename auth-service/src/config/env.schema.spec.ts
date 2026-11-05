@@ -15,6 +15,10 @@ describe('validateEnv: canal interno', () => {
     expect(validateEnv(base)).toMatchObject({ INTERNAL_TLS_PORT: 3443 });
   });
 
+  it('en produccion exige el HTTPS interno', () => {
+    expect(() => validateEnv({ ...base, NODE_ENV: 'production' })).toThrow(/INTERNAL_TLS/);
+  });
+
   it('acepta el certificado junto con su llave', () => {
     expect(() =>
       validateEnv({
