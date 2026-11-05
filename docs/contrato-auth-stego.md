@@ -1,6 +1,6 @@
 # Contrato AUTH - STEGO
 
-Acuerdo entre los dos microservicios. **STEGO ya lo implementa. AUTH todavía debe implementar `POST /internal/authorization/check`**: hasta entonces, STEGO con `AUTHZ_MODE=real` responde 503 en toda operación protegida.
+Acuerdo entre los dos microservicios, implementado en ambos.
 
 ## Flujo
 
@@ -58,7 +58,7 @@ Cabecera `X-Service-Key: <STEGO_SERVICE_KEY>`. El valor es un secreto compartido
 | Acción | Endpoint de STEGO | Roles previstos |
 |---|---|---|
 | `steganography.analyze` | `POST /api/steganography/analyze` | ADMIN o ANALYST |
-| `steganography.results.read` | `GET /api/steganography/results/:id` | A definir en AUTH |
+| `steganography.results.read` | `GET /api/steganography/results/:id` | ADMIN o ANALYST |
 
 AUTH decide por los roles y el estado **vigentes en la base de datos**, sin confiar en datos del token más allá de su identidad. La propiedad del análisis la comprueba STEGO, porque AUTH no conoce ese dato.
 
@@ -82,7 +82,7 @@ Siempre HTTP **200** cuando AUTH pudo decidir, también al denegar:
 | `allowed` | Booleano JSON. Los valores `"true"` o `1` no son válidos |
 | `reason` | Texto de hasta 200 caracteres, sin datos sensibles |
 
-Con un `subject_token` inválido o un usuario inactivo, AUTH debe responder 200 con `allowed=false` y el `subject_id` que corresponda. Si no puede determinarlo, debe responder con un error: STEGO lo tratará como falta de decisión.
+Con un `subject_token` inválido o un usuario inactivo, AUTH debe responder 200 con `allowed=false` y el `subject_id` que corresponda. Si no puede determinarlo, debe responder con un error: STEGO lo tratará como falta de decisión. AUTH usa 400 en ese caso, y los valores de `reason` están en [matriz-roles-permisos.md](matriz-roles-permisos.md).
 
 ## Comportamiento ante fallos
 
@@ -130,4 +130,3 @@ Con `AUTHZ_MODE=mock`, STEGO permite la operación si el JWT es válido, sin con
 ## Pendiente
 
 - **Canal seguro:** la sección 2.4 lo exige, pero hoy la llamada usa HTTP dentro de la red de Docker. La clave de servicio y el JWT viajan sin cifrar por esa red hasta que se configure TLS o mTLS.
-- **Endpoint en AUTH:** implementar este contrato y excluir `internal` del prefijo global `/api`.

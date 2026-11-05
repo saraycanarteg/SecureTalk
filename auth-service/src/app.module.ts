@@ -10,6 +10,7 @@ import { validateEnv } from './config/env.schema.js';
 import type { Env } from './config/env.schema.js';
 import { buildDatabaseOptions } from './database/database.config.js';
 import { HealthController } from './health/health.controller';
+import { InternalAuthorizationModule } from './internal-authorization/internal-authorization.module';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { UserRolesModule } from './user-roles/user-roles.module';
@@ -49,6 +50,7 @@ import { UserRolesModule } from './user-roles/user-roles.module';
     UsersModule,
     RolesModule,
     UserRolesModule,
+    InternalAuthorizationModule,
   ],
   controllers: [HealthController],
   providers: [

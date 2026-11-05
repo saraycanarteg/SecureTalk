@@ -28,4 +28,5 @@ Object.assign(process.env, {
   JWT_ISSUER: 'securetalk-auth-test',
   JWT_AUDIENCE: 'securetalk-api-test',
   JWT_EXPIRES_IN_SECONDS: '900',
+  STEGO_SERVICE_KEY: 'clave-de-servicio-solo-para-pruebas-e2e',
 });

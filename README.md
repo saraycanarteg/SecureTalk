@@ -16,6 +16,7 @@ Requisitos: Docker con Docker Compose y Node.js.
 cp .env.example .env
 cp auth-service/.env.example auth-service/.env
 cp stego-service/.env.example stego-service/.env
+# STEGO_SERVICE_KEY debe tener el mismo valor en ambos servicios y al menos 32 caracteres.
 
 # 2. Llaves Ed25519 para firmar y verificar los JWT
 node scripts/generate-jwt-keys.mjs
@@ -24,11 +25,12 @@ node scripts/generate-jwt-keys.mjs
 docker compose up -d --build
 ```
 
-Antes de usar la API, prepara la base de datos de AUTH. El seed crea los roles base y el usuario ADMIN inicial:
+Antes de usar la API, prepara las bases de datos de ambos servicios. El seed crea los roles base y el usuario ADMIN inicial:
 
 ```bash
 docker compose exec auth-service npm run migration:run
 docker compose exec auth-service npm run seed
+docker compose exec stego-service npm run migration:run
 ```
 
 Con `NODE_ENV` distinto de `production`, Swagger de AUTH está en `http://localhost:3001/api/docs`.
@@ -56,7 +58,9 @@ npm run test:e2e
 | PATCH | `/api/roles/:id` | ADMIN | Implementado |
 | POST | `/api/user-roles` | ADMIN | Implementado |
 | DELETE | `/api/user-roles/:id` | ADMIN | Implementado |
-| POST | `/internal/authorization/check` | Solo STEGO, con `X-Service-Key` | Pendiente |
+| POST | `/internal/authorization/check` | Solo STEGO, con `X-Service-Key` | Implementado |
+
+La matriz de roles y permisos está en [docs/matriz-roles-permisos.md](docs/matriz-roles-permisos.md).
 
 ## Matriz de riesgos
 

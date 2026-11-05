@@ -364,13 +364,12 @@ describe('AUTH (e2e)', () => {
       expect(res.headers['x-content-type-options']).toBe('nosniff');
     });
 
-    it('documenta en OpenAPI solo lo implementado', async () => {
+    it('documenta en OpenAPI todos los endpoints', async () => {
       const res = await server().get('/api/docs-json').expect(200);
 
       expect(Object.keys(res.body.paths)).toEqual(
-        expect.arrayContaining(['/api/auth/login', '/api/auth/profile', '/api/auth/logout', '/api/users', '/api/roles', '/api/user-roles', '/health']),
+        expect.arrayContaining(['/api/auth/login', '/api/auth/profile', '/api/auth/logout', '/api/users', '/api/roles', '/api/user-roles', '/internal/authorization/check', '/health']),
       );
-      expect(Object.keys(res.body.paths)).not.toContain('/internal/authorization/check');
     });
   });
 });

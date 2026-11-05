@@ -3,12 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { UserRole } from '../user-roles/entities/user-role.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthorizationService {
   constructor(
     @InjectRepository(UserRole)
     private readonly userRoles: Repository<UserRole>,
+    @InjectRepository(User)
+    private readonly users: Repository<User>,
   ) {}
 
   // Fuente unica de los permisos: se consulta en cada peticion y nunca se guarda ni se lee del JWT.
@@ -31,5 +34,10 @@ export class AuthorizationService {
       .getRawMany<{ rol: string }>();
 
     return rows.map((row) => row.rol);
+  }
+
+  // existsBy excluye a los usuarios con soft delete.
+  isUserActive(userId: string): Promise<boolean> {
+    return this.users.existsBy({ id: userId, estado: true });
   }
 }

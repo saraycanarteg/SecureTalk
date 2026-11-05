@@ -85,6 +85,10 @@ export const envSchema = z.object({
     .max(900)
     .default(900),
 
+  STEGO_SERVICE_KEY: z
+    .string()
+    .min(32),
+
   RATE_LIMIT_BLOCK_MS: z.coerce
     .number()
     .int()

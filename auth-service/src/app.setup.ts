@@ -6,6 +6,7 @@ import helmet from 'helmet';
 
 import { AppModule } from './app.module';
 import { AuthModule } from './auth/auth.module';
+import { InternalAuthorizationModule } from './internal-authorization/internal-authorization.module';
 import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware.js';
 import type { Env } from './config/env.schema.js';
 import { UserRolesModule } from './user-roles/user-roles.module';
@@ -33,7 +34,7 @@ export function configureApp(app: NestExpressApplication): void {
       .filter(Boolean),
   });
 
-  app.setGlobalPrefix('api', { exclude: ['health'] });
+  app.setGlobalPrefix('api', { exclude: ['health', 'internal/authorization/check'] });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -56,8 +57,18 @@ function setupSwagger(app: NestExpressApplication): void {
       .setDescription('Autenticacion con Argon2id y JWT firmado con EdDSA (Ed25519)')
       .setVersion('1.0')
       .addBearerAuth()
+      .addApiKey({ type: 'apiKey', name: 'X-Service-Key', in: 'header' }, 'service-key')
       .build(),
-    { include: [AppModule, AuthModule, UsersModule, RolesModule, UserRolesModule] },
+    {
+      include: [
+        AppModule,
+        AuthModule,
+        UsersModule,
+        RolesModule,
+        UserRolesModule,
+        InternalAuthorizationModule,
+      ],
+    },
   );
   SwaggerModule.setup('api/docs', app, document);
 }
