@@ -61,7 +61,11 @@ npm run test:e2e
 | DELETE | `/api/user-roles/:id` | ADMIN | Implementado |
 | POST | `/internal/authorization/check` | Solo STEGO, con `X-Service-Key` | Implementado |
 
-La matriz de roles y permisos está en [docs/matriz-roles-permisos.md](docs/matriz-roles-permisos.md).
+## Documentación de AUTH
+
+- [Autenticación JWT y RBAC](docs/autenticacion-rbac.md)
+- [Modelo de datos y diagrama entidad-relación](docs/modelo-datos.md)
+- [Matriz de roles y permisos](docs/matriz-roles-permisos.md)
 
 ## Matriz de riesgos
 
