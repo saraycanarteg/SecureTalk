@@ -31,11 +31,12 @@ export class AnalysisResponseDto {
     description:
       'anomaly_score es el mayor p-valor chi-cuadrado; threshold y lower_threshold son sus umbrales. ' +
       'estimated_payload_rate es la proporcion de muestras que usaria el mensaje, segun el analisis de ' +
-      'pares de muestras, y max_prefix_payload_rate la misma medida en el inicio de la imagen. evidence ' +
-      'lista los analisis que respaldan un resultado sospechoso. Sin datos suficientes, las medidas son ' +
+      'pares de muestras, y max_prefix_payload_rate la misma medida en el inicio de la imagen. ' +
+      'plaintext_run es la mayor racha de caracteres legibles en los primeros LSB; el texto nunca se ' +
+      'devuelve. evidence lista los analisis que respaldan un resultado sospechoso. Sin datos suficientes, las medidas son ' +
       'null. Las variantes que la tecnica no puede analizar solo incluyen image.',
     example: {
-      method: 'chi_square_westfeld_pfitzmann+sample_pair_analysis',
+      method: 'chi_square_westfeld_pfitzmann+sample_pair_analysis+lsb_plaintext',
       anomaly_score: 0.999993,
       threshold: 0.95,
       lower_threshold: 0.05,
@@ -43,6 +44,8 @@ export class AnalysisResponseDto {
       payload_rate_threshold: 0.08,
       max_prefix_payload_rate: 1,
       prefix_payload_rate_threshold: 0.15,
+      plaintext_run: 0,
+      plaintext_run_threshold: 16,
       evidence: ['sample_pairs', 'chi_square'],
       image: { format: 'png', width: 512, height: 384 },
       channels: {

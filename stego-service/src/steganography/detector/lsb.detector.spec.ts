@@ -114,8 +114,17 @@ describe('LsbDetector', () => {
         PAYLOAD_RATE_THRESHOLD,
       );
       expect(indicators.max_prefix_payload_rate).toBeGreaterThanOrEqual(
-        PREFIX_PAYLOAD_RATE_THRESHOLD,
+        indicators.prefix_payload_rate_threshold as number,
       );
+    });
+
+    it('detecta un mensaje corto sin cifrar y no devuelve su contenido', async () => {
+      const result = await detector.analyze(sample('lsb-texto-corto.png'));
+
+      expect(result.status).toBe('sospechoso');
+      expect(result.indicators.evidence).toEqual(['lsb_plaintext']);
+      expect(result.indicators.plaintext_run).toBeGreaterThanOrEqual(16);
+      expect(JSON.stringify(result)).not.toContain('Mensaje secreto');
     });
 
     it('la insercion completa tambien la confirma chi-cuadrado', async () => {
@@ -187,6 +196,37 @@ describe('LsbDetector', () => {
       const result = await detector.analyze(sample('lsb-disperso-3.png'));
 
       expect(result.status).toBe('sin_indicios');
+    });
+  });
+
+  describe('umbral segun el tamano de la imagen', () => {
+    const noisyImage = (width: number, height: number) =>
+      buildRgbPng(width, height, (x, y) => {
+        const value = (x * 37 + y * 101 + ((x * y) % 13)) & 0xff;
+        return [value, value ^ 0x15, value ^ 0x2a];
+      });
+
+    it('exige mas evidencia con pocos pixeles que con muchos', async () => {
+      const small = await analyzeBuffer(noisyImage(128, 128));
+      const large = await detector.analyze(sample('original.png'));
+
+      expect(small.indicators.payload_rate_threshold).toBeGreaterThan(
+        large.indicators.payload_rate_threshold as number,
+      );
+      expect(large.indicators.payload_rate_threshold).toBe(
+        PAYLOAD_RATE_THRESHOLD,
+      );
+    });
+
+    it('informa que porcion estuvo mas cerca de su propio umbral', async () => {
+      const { indicators } = await detector.analyze(sample('lsb-2.png'));
+
+      expect(indicators.prefix_payload_rate_threshold).toBeGreaterThanOrEqual(
+        PREFIX_PAYLOAD_RATE_THRESHOLD,
+      );
+      expect(indicators.max_prefix_payload_rate).toBeGreaterThan(
+        indicators.estimated_payload_rate as number,
+      );
     });
   });
 
@@ -264,14 +304,15 @@ describe('LsbDetector', () => {
       expect(technique).toBe('lsb_statistical_analysis');
       expect(limitations).toContain('Resultado indicativo, no concluyente');
       expect(indicators).toMatchObject({
-        method: 'chi_square_westfeld_pfitzmann+sample_pair_analysis',
+        method:
+          'chi_square_westfeld_pfitzmann+sample_pair_analysis+lsb_plaintext',
         anomaly_score: expect.any(Number),
         threshold: SUSPICIOUS_THRESHOLD,
         lower_threshold: CLEAN_THRESHOLD,
         estimated_payload_rate: expect.any(Number),
         payload_rate_threshold: PAYLOAD_RATE_THRESHOLD,
         max_prefix_payload_rate: expect.any(Number),
-        prefix_payload_rate_threshold: PREFIX_PAYLOAD_RATE_THRESHOLD,
+        prefix_payload_rate_threshold: expect.any(Number),
         image: { format: 'png', width: 512, height: 384 },
       });
       const channels = indicators.channels as Record<string, any>;

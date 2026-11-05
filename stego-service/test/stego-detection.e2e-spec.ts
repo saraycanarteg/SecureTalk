@@ -159,6 +159,14 @@ describe('T09: analisis de muestras originales y con carga LSB (e2e)', () => {
     expect(readFileSync(join(quarantineDir, stored))).toEqual(content);
   });
 
+  it('lsb-texto-corto.png: detecta el mensaje corto sin devolverlo', async () => {
+    const { body } = await analyzeSample('lsb-texto-corto.png');
+
+    expect(body).toMatchObject({ status: 'sospechoso', action: 'cuarentena' });
+    expect(body.indicators.evidence).toEqual(['lsb_plaintext']);
+    expect(JSON.stringify(body)).not.toContain('Mensaje secreto');
+  });
+
   it('limitacion documentada: una carga dispersa del 3 % no se detecta', async () => {
     const { body } = await analyzeSample('lsb-disperso-3.png');
 

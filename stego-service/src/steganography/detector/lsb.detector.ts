@@ -7,6 +7,7 @@ import type { AnalyzableImage, ColorChannel } from '../image/decoded-image.js';
 import { decodeImage } from '../image/image-decoder';
 import { chiSquareSurvival } from './chi-square';
 import { Detector, DetectorResult } from './detector.interface';
+import { findPlaintextRun, PLAINTEXT_RUN_THRESHOLD } from './lsb-plaintext';
 import {
   createClassCounts,
   estimatePayloadRate,
@@ -24,6 +25,16 @@ export const CLEAN_THRESHOLD = 0.05;
 export const PAYLOAD_RATE_THRESHOLD = 0.08;
 export const CLEAN_PAYLOAD_RATE = 0.05;
 export const PREFIX_PAYLOAD_RATE_THRESHOLD = 0.15;
+
+// El error de la estimacion crece como 1/raiz(n): por debajo de esta cantidad de pixeles el
+// umbral sube en esa proporcion. Sin este ajuste, los graficos pequenos daban falsos positivos.
+const FULL_CONFIDENCE_PIXELS = 150_000;
+
+const scaledThreshold = (base: number, pixels: number) =>
+  Math.max(
+    base,
+    PAYLOAD_RATE_THRESHOLD * Math.sqrt(FULL_CONFIDENCE_PIXELS / pixels),
+  );
 
 // Tambien se mide el inicio del canal: un mensaje corto insertado en orden
 // solo se nota en la parte de la imagen que ocupa.
@@ -179,19 +190,20 @@ function onesRatio(image: AnalyzableImage, channel: ColorChannel): number {
 function classify(
   score: number | null,
   rate: number | null,
-  prefixRate: number | null,
+  rateExceeded: boolean,
+  plaintextRun: number,
 ): Classification {
   const evidence: string[] = [];
-  if (
-    rate !== null &&
-    prefixRate !== null &&
-    (rate >= PAYLOAD_RATE_THRESHOLD ||
-      prefixRate >= PREFIX_PAYLOAD_RATE_THRESHOLD)
-  ) {
+  if (rateExceeded) {
     evidence.push('sample_pairs');
     if (score !== null && score >= SUSPICIOUS_THRESHOLD) {
       evidence.push('chi_square');
     }
+  }
+  if (plaintextRun >= PLAINTEXT_RUN_THRESHOLD) {
+    evidence.push('lsb_plaintext');
+  }
+  if (evidence.length > 0) {
     return { status: 'sospechoso', evidence, reason: '' };
   }
 
@@ -250,15 +262,26 @@ export class LsbDetector implements Detector {
     );
     const hasWhole = boundaries.includes(pixelCount);
     const rate = hasWhole ? meanRates[0][boundaries.length - 1] : null;
-    const prefixRates = meanRates.flatMap((rates) =>
-      hasWhole ? rates.slice(0, -1) : rates,
-    );
-    const prefixRate =
-      rate === null
-        ? null
-        : prefixRates.length > 0
-          ? Math.max(...prefixRates)
-          : 0;
+    const rateThreshold = scaledThreshold(PAYLOAD_RATE_THRESHOLD, pixelCount);
+
+    // De todas las porciones iniciales se informa la que mas se acerca a su propio umbral.
+    let prefixRate = hasWhole ? 0 : null;
+    let prefixThreshold = PREFIX_PAYLOAD_RATE_THRESHOLD;
+    for (const rates of meanRates) {
+      boundaries.slice(0, -1).forEach((pixels, i) => {
+        const threshold = scaledThreshold(
+          PREFIX_PAYLOAD_RATE_THRESHOLD,
+          pixels,
+        );
+        if (rates[i] / threshold > (prefixRate ?? 0) / prefixThreshold) {
+          prefixRate = rates[i];
+          prefixThreshold = threshold;
+        }
+      });
+    }
+    const rateExceeded =
+      rate !== null &&
+      (rate >= rateThreshold || (prefixRate ?? 0) >= prefixThreshold);
 
     const pValues = directions
       .flat()
@@ -284,19 +307,28 @@ export class LsbDetector implements Detector {
       }),
     );
 
-    const { status, evidence, reason } = classify(score, rate, prefixRate);
+    const plaintextRun = findPlaintextRun(image);
+    const { status, evidence, reason } = classify(
+      score,
+      rate,
+      rateExceeded,
+      plaintextRun,
+    );
     return {
       technique: TECHNIQUE,
       status,
       indicators: {
-        method: 'chi_square_westfeld_pfitzmann+sample_pair_analysis',
+        method:
+          'chi_square_westfeld_pfitzmann+sample_pair_analysis+lsb_plaintext',
         anomaly_score: score,
         threshold: SUSPICIOUS_THRESHOLD,
         lower_threshold: CLEAN_THRESHOLD,
         estimated_payload_rate: rate === null ? null : round(rate),
-        payload_rate_threshold: PAYLOAD_RATE_THRESHOLD,
+        payload_rate_threshold: round(rateThreshold),
         max_prefix_payload_rate: prefixRate === null ? null : round(prefixRate),
-        prefix_payload_rate_threshold: PREFIX_PAYLOAD_RATE_THRESHOLD,
+        prefix_payload_rate_threshold: round(prefixThreshold),
+        plaintext_run: plaintextRun,
+        plaintext_run_threshold: PLAINTEXT_RUN_THRESHOLD,
         evidence,
         image: imageInfo,
         channels,
