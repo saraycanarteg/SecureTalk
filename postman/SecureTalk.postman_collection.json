@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SecureTalk Backend V1",
-    "description": "Pruebas de AUTH y STEGO: todos los endpoints, los escenarios T01 a T12 del Anexo D y ataques.\n\nAntes de empezar:\n1. node scripts/generate-stego-samples.mjs (crea los archivos de mas de 10 MB, que no se versionan).\n2. Postman > Settings > General > Working Directory: la raiz del repositorio, para que encuentre samples/.\n3. En las variables de la coleccion: adminPassword (SEED_ADMIN_PASSWORD) y serviceKey (STEGO_SERVICE_KEY).\n\nEjecutar en orden con Run Collection, sin la carpeta T08 Manual. Cada corrida crea usuarios nuevos.\nDos peticiones de la carpeta de inyeccion fallan a proposito hasta corregir auth-service: ver su descripcion.\nEsperar 2 minutos entre corridas completas: una corrida usa casi todo el limite de 100 peticiones por minuto de STEGO, y al superarlo responde 429 por el limite, no por un fallo.\nT01, T08 y T12 requieren comandos de Docker: ver la descripcion de cada carpeta.",
+    "description": "Pruebas de AUTH y STEGO: todos los endpoints, los escenarios T01 a T12 del Anexo D y ataques.\n\nAntes de empezar:\n1. node scripts/generate-stego-samples.mjs (crea los archivos de mas de 10 MB, que no se versionan).\n2. Postman > Settings > General > Working Directory: la raiz del repositorio, para que encuentre samples/.\n3. Las variables de la coleccion traen los valores de los .env.example. Si los cambiaste, actualiza Current value de adminPassword (SEED_ADMIN_PASSWORD) y serviceKey (STEGO_SERVICE_KEY) y guarda.\n\nEjecutar en orden con Run Collection, sin la carpeta T08 Manual. Cada corrida crea usuarios nuevos.\nDos peticiones de la carpeta de inyeccion fallan a proposito hasta corregir auth-service: ver su descripcion.\nEsperar 2 minutos entre corridas completas: una corrida usa casi todo el limite de 100 peticiones por minuto de STEGO, y al superarlo responde 429 por el limite, no por un fallo.\nT01, T08 y T12 requieren comandos de Docker: ver la descripcion de cada carpeta.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -43,12 +43,12 @@
     },
     {
       "key": "adminPassword",
-      "value": "CAMBIAR_SEED_ADMIN_PASSWORD",
+      "value": "CAMBIAR_contrasena_larga",
       "type": "string"
     },
     {
       "key": "serviceKey",
-      "value": "CAMBIAR_STEGO_SERVICE_KEY",
+      "value": "CAMBIAR_clave_de_servicio_de_al_menos_32_caracteres",
       "type": "string"
     },
     {
@@ -168,6 +168,12 @@
                   "  const body = pm.response.json();",
                   "  pm.test('entrega un JWT', () => pm.expect(body.accessToken.split('.')).to.have.lengthOf(3));",
                   "  pm.collectionVariables.set('adminToken', body.accessToken);",
+                  "}",
+                  "if (pm.response.code !== 200) {",
+                  "  pm.test('COLECCION DETENIDA: adminPassword debe ser igual a SEED_ADMIN_PASSWORD de auth-service/.env', () => {",
+                  "    throw new Error('Sin el login de admin fallaria todo lo demas. Corrige Current value en las variables de la coleccion y vuelve a ejecutar. Tras 5 intentos fallidos, la cuenta se bloquea 15 minutos.');",
+                  "  });",
+                  "  postman.setNextRequest(null);",
                   "}"
                 ]
               }
