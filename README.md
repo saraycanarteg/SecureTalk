@@ -9,6 +9,8 @@ Cada servicio tiene su propio proceso, su configuración y su base de datos. El 
 
 La arquitectura y los límites de confianza están en [docs/arquitectura.md](docs/arquitectura.md).
 
+Cada servicio tiene su guía: [auth-service](auth-service/README.md) y [stego-service](stego-service/README.md).
+
 ## Puesta en marcha
 
 Requisitos: Docker con Docker Compose y Node.js.
