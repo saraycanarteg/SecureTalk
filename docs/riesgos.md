@@ -42,7 +42,7 @@ ISO/IEC 27001 e ISO/IEC 27034 se usan como referencia de principios. El proyecto
 |---|---|---|---|---|---|---|---|---|
 | R10 | Suplantación de STEGO ante AUTH | Endpoint interno sin autenticar | Media | Alta | Alto | `X-Service-Key` de al menos 32 caracteres, comparada en tiempo constante | `internal-authorization.e2e-spec.ts` | Bajo |
 | R11 | Procesar archivos sin una decisión válida | Permitir por defecto ante fallos | Media | Alta | Alto | Denegación por defecto: caída, timeout, redirección, otro código o respuesta inválida dan 503 sin recibir el archivo | T08, `stego.e2e-spec.ts` | Bajo |
-| R12 | Interceptar el JWT o la clave de servicio dentro de la red | **Canal HTTP sin cifrar entre servicios** | Baja | Alta | Medio | Red de Docker separada; AUTH y STEGO publicados solo en `127.0.0.1`. **No hay TLS ni mTLS** | `docker-compose.yml` | **Medio. Pendiente: la sección 2.4 del enunciado exige un canal seguro** |
+| R12 | Interceptar el JWT o la clave de servicio dentro de la red | Canal sin cifrar entre servicios | Baja | Alta | Medio | HTTPS con TLS 1.2 o superior en el puerto interno 3443, que no se publica; STEGO verifica el certificado de AUTH; con `NODE_ENV=production`, AUTH rechaza las llamadas internas sin TLS y STEGO no arranca sin `https` | `service-key.guard.spec.ts`, `env.schema.spec.ts`, `docker-compose.yml` | Bajo: el certificado es autofirmado, la identidad de STEGO se prueba con la clave de servicio (sin mTLS) y fuera de producción AUTH también acepta HTTP para las pruebas manuales |
 
 ### Archivos e imágenes (STEGO)
 
@@ -72,22 +72,18 @@ ISO/IEC 27001 e ISO/IEC 27034 se usan como referencia de principios. El proyecto
 
 | ID | Amenaza | Vulnerabilidad | Prob. | Imp. | Riesgo | Controles aplicados | Evidencia | Residual |
 |---|---|---|---|---|---|---|---|---|
-| R27 | Dejar STEGO sin servicio para todos con un token válido | Las decisiones que STEGO pide a AUTH salen de una sola IP y cuentan contra el límite de 100 por minuto de AUTH | Media | Alta | Alto | Falla de forma segura: responde 503 y no procesa nada | [inundar-limite-auth.mjs](evidencias/inundar-limite-auth.mjs): tras 100 operaciones, 503 durante 85 s | **Alto: pendiente excluir el endpoint interno de ese límite** |
-| R28 | Error interno con un cuerpo grande en una ruta pública | `auth-service` usa NestJS 12.2.0, que no traduce este error del analizador de JSON | Media | Baja | Bajo | Mensaje genérico, sin detalles | [coleccion-postman.txt](evidencias/coleccion-postman.txt): 500 en vez de 413 | **Bajo: pendiente; el enunciado pide 413** |
-| R29 | Error interno con una paginación extrema | `page` no tiene máximo y el desplazamiento no cabe en `bigint` | Baja | Baja | Bajo | Solo ADMIN; mensaje genérico | [coleccion-postman.txt](evidencias/coleccion-postman.txt): 500 con `page=1e300` | **Bajo: pendiente** |
+| R27 | Dejar STEGO sin servicio para todos con un token válido | Las decisiones que STEGO pide a AUTH salen de una sola IP y podrían contar contra el límite de peticiones de AUTH | Media | Alta | Alto | El endpoint interno no cuenta para el límite por IP y sigue protegido por la clave de servicio; si AUTH no responde, STEGO falla de forma segura con 503 | `internal-throttling.e2e-spec.ts` | Bajo |
+| R28 | Error interno con un cuerpo grande en una ruta pública | Un cuerpo JSON que supera el límite podría no traducirse a un error controlado | Media | Baja | Bajo | `auth-service` responde 413 con un mensaje genérico | `body-limit.e2e-spec.ts`, [coleccion-postman.txt](evidencias/coleccion-postman.txt) | Bajo |
+| R29 | Error interno con una paginación extrema | Un `page` sin máximo produciría un desplazamiento que no cabe en `bigint` | Baja | Baja | Bajo | `page` tiene un máximo de 1 000 000 y lo que lo supera se rechaza con 400 | [coleccion-postman.txt](evidencias/coleccion-postman.txt) | Bajo |
 | R30 | Bloquear la cuenta de otra persona | El bloqueo es por cuenta: 5 intentos fallidos la bloquean incluso con la contraseña correcta | Alta | Media | Alto | El bloqueo dura 15 minutos y evita la fuerza bruta | [coleccion-postman.txt](evidencias/coleccion-postman.txt) | Medio: compromiso aceptado, también aplica a `admin` |
 
 ## Riesgos abiertos
 
 | ID | Decisión pendiente |
 |---|---|
-| R12 | Agregar TLS o mTLS entre AUTH y STEGO, o justificar el riesgo como aceptado en la entrega |
 | R19 | Se acepta para esta versión. Detectar técnicas que conservan las estadísticas requiere otros métodos |
 | R21 | Definir retención de la cuarentena y un procedimiento de eliminación |
 | R25 | Enviar las bitácoras a un destino fuera del contenedor |
-| R27 | Excluir `/internal/authorization/check` del límite por IP en `auth-service`; ya está protegido por la clave de servicio |
-| R28 | Actualizar NestJS en `auth-service` a la versión que usa `stego-service` |
-| R29 | Agregar un máximo a `page` en `auth-service` |
 
 ## Relación con los enfoques y normas
 
