@@ -40,7 +40,9 @@ function setupSwagger(app: NestExpressApplication): void {
     app,
     new DocumentBuilder()
       .setTitle('SecureTalk STEGO')
-      .setDescription('Recepcion de imagenes y registro de analisis, autorizados por AUTH')
+      .setDescription(
+        'Validacion y analisis LSB de imagenes PNG y BMP. Cada operacion verifica el JWT y pide a AUTH una decision de autorizacion vigente.',
+      )
       .setVersion('1.0')
       .addBearerAuth()
       .build(),

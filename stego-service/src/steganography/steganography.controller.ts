@@ -22,10 +22,13 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiPayloadTooLargeResponse,
   ApiServiceUnavailableResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
+  ApiUnsupportedMediaTypeResponse,
 } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -42,6 +45,7 @@ import { SteganographyService } from './steganography.service';
   type: ErrorResponseDto,
   description: 'No se obtuvo una decision verificable de AUTH; no se proceso nada',
 })
+@ApiTooManyRequestsResponse({ type: ErrorResponseDto, description: 'Se supero el limite de peticiones' })
 @Controller('steganography')
 export class SteganographyController {
   constructor(private readonly steganographyService: SteganographyService) {}
@@ -53,18 +57,38 @@ export class SteganographyController {
   @UseGuards(JwtAuthGuard, AuthzGuard)
   @RequireAction('steganography.analyze')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Recibe una imagen y registra su analisis' })
+  @ApiOperation({
+    summary: 'Analiza una imagen PNG o BMP en busca de datos ocultos por LSB',
+    description:
+      'Requiere ADMIN o ANALYST. Valida extension, tipo de contenido, firma real, tamaño y limites de ' +
+      'procesamiento antes de analizar; un archivo rechazado no se guarda ni se registra. ' +
+      'Politica: sospechoso pasa a cuarentena, sin_indicios no tiene accion, no_concluyente genera una ' +
+      'advertencia y error se rechaza. El resultado es indicativo, no una prueba de esteganografia.',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       required: ['file'],
-      properties: { file: { type: 'string', format: 'binary' } },
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Imagen .png o .bmp de hasta 10 MB y 16 megapixeles',
+        },
+      },
     },
   })
   @ApiCreatedResponse({ type: AnalysisResponseDto })
-  @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'Falta el archivo' })
-  @ApiPayloadTooLargeResponse({ type: ErrorResponseDto, description: 'El archivo supera 10 MB' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'Falta el archivo, o esta vacio o danado' })
+  @ApiPayloadTooLargeResponse({
+    type: ErrorResponseDto,
+    description: 'El archivo supera 10 MB o la imagen supera 16 megapixeles',
+  })
+  @ApiUnsupportedMediaTypeResponse({
+    type: ErrorResponseDto,
+    description: 'La extension, el tipo de contenido o la firma no corresponden a un PNG o BMP',
+  })
   analyze(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Req() req: AuthenticatedRequest,
@@ -78,8 +102,16 @@ export class SteganographyController {
   @Get('results/:id')
   @UseGuards(JwtAuthGuard, AuthzGuard)
   @RequireAction('steganography.results.read')
-  @ApiOperation({ summary: 'Consulta un analisis propio' })
+  @ApiOperation({
+    summary: 'Consulta un analisis propio',
+    description: 'Requiere ADMIN o ANALYST y que el analisis pertenezca al usuario del token.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid', description: 'analysis_id devuelto por el analisis' })
   @ApiOkResponse({ type: AnalysisResponseDto })
+  @ApiForbiddenResponse({
+    type: ErrorResponseDto,
+    description: 'AUTH denego la operacion o el analisis pertenece a otro usuario',
+  })
   @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'Identificador invalido' })
   @ApiNotFoundResponse({ type: ErrorResponseDto, description: 'El analisis no existe' })
   getResult(

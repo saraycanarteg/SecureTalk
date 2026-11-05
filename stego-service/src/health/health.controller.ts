@@ -1,5 +1,10 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
-import { ApiOperation, ApiServiceUnavailableResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiServiceUnavailableResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 
@@ -11,6 +16,10 @@ export class HealthController {
 
   @Get()
   @ApiOperation({ summary: 'Estado del servicio y su conexion a la base de datos' })
+  @ApiOkResponse({
+    description: 'El servicio y la base de datos responden',
+    schema: { example: { status: 'ok', service: 'stego-service' } },
+  })
   @ApiServiceUnavailableResponse({ description: 'La base de datos no responde' })
   async check() {
     try {

@@ -756,6 +756,23 @@ describe('STEGO (e2e)', () => {
           '/health',
         ]),
       );
+
+      const analyzeDoc = res.body.paths['/api/steganography/analyze'].post;
+      const resultDoc = res.body.paths['/api/steganography/results/{id}'].get;
+      expect(Object.keys(analyzeDoc.responses).sort()).toEqual(
+        ['201', '400', '401', '403', '413', '415', '429', '503'],
+      );
+      expect(Object.keys(resultDoc.responses).sort()).toEqual(
+        ['200', '400', '401', '403', '404', '429', '503'],
+      );
+      expect(analyzeDoc.security).toEqual([{ bearer: [] }]);
+      expect(resultDoc.security).toEqual([{ bearer: [] }]);
+      expect(Object.keys(analyzeDoc.requestBody.content)).toEqual(['multipart/form-data']);
+      expect(resultDoc.parameters[0]).toMatchObject({
+        name: 'id',
+        in: 'path',
+        schema: { format: 'uuid' },
+      });
     });
   });
 });
