@@ -559,6 +559,60 @@ describe('STEGO (e2e)', () => {
     );
   });
 
+  describe('T10: peticiones con otra forma y nombres maliciosos', () => {
+    const png = { filename: 'muestra.png', contentType: 'image/png' };
+    const post = (token: string) =>
+      server()
+        .post('/api/steganography/analyze')
+        .set('Authorization', `Bearer ${token}`);
+
+    it('rechaza dos archivos sin conservar ninguno', async () => {
+      await post(await signToken(randomUUID()))
+        .attach('file', CONTENT, png)
+        .attach('file', CONTENT, png)
+        .expect(400);
+
+      await expectNothingProcessed();
+    });
+
+    it('rechaza un archivo en otro campo sin conservarlo', async () => {
+      await post(await signToken(randomUUID()))
+        .attach('otro', CONTENT, png)
+        .expect(400);
+
+      await expectNothingProcessed();
+    });
+
+    it('rechaza campos adicionales, como un permiso enviado por el cliente', async () => {
+      await post(await signToken(randomUUID()))
+        .field('role', 'ADMIN')
+        .attach('file', CONTENT, png)
+        .expect(400);
+
+      await expectNothingProcessed();
+    });
+
+    it.each([
+      ['../../../etc/evil.png', 'evil.png'],
+      ['..\\..\\evil.png', 'evil.png'],
+    ])('usa %s solo como dato, nunca como ruta', async (filename, expected) => {
+      let pathSeen = '';
+      detector.analyze.mockImplementation(async (path: string) => {
+        pathSeen = path;
+        return DETECTOR_RESULT;
+      });
+
+      const res = await analyze(await signToken(randomUUID()), CONTENT, {
+        filename,
+        contentType: 'image/png',
+      }).expect(201);
+
+      expect(res.body.filename).toBe(expected);
+      expect(pathSeen.startsWith(uploadDir)).toBe(true);
+      expect(pathSeen).not.toContain('evil');
+    });
+  });
+
   describe('GET /api/steganography/results/:id', () => {
     const createAnalysis = async (userId: string) => {
       const res = await analyze(await signToken(userId)).expect(201);
