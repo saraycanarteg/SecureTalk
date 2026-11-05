@@ -1,0 +1,399 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "El servicio y la base de datos responden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "status": "ok",
+                    "service": "stego-service"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "La base de datos no responde"
+          }
+        },
+        "summary": "Estado del servicio y su conexion a la base de datos",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/steganography/analyze": {
+      "post": {
+        "description": "Requiere ADMIN o ANALYST. Valida extension, tipo de contenido, firma real, tamaño y limites de procesamiento antes de analizar; un archivo rechazado no se guarda ni se registra. Politica: sospechoso pasa a cuarentena, sin_indicios no tiene accion, no_concluyente genera una advertencia y error se rechaza. El resultado es indicativo, no una prueba de esteganografia.",
+        "operationId": "SteganographyController_analyze",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Imagen .png o .bmp de hasta 10 MB y 16 megapixeles"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta el archivo, o esta vacio o danado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente, invalido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AUTH denego la operacion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El archivo supera 10 MB o la imagen supera 16 megapixeles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "La extension, el tipo de contenido o la firma no corresponden a un PNG o BMP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Se supero el limite de peticiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No se obtuvo una decision verificable de AUTH; no se proceso nada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Analiza una imagen PNG o BMP en busca de datos ocultos por LSB",
+        "tags": [
+          "steganography"
+        ]
+      }
+    },
+    "/api/steganography/results/{id}": {
+      "get": {
+        "description": "Requiere ADMIN o ANALYST y que el analisis pertenezca al usuario del token.",
+        "operationId": "SteganographyController_getResult",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "analysis_id devuelto por el analisis",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Identificador invalido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente, invalido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "AUTH denego la operacion o el analisis pertenece a otro usuario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El analisis no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Se supero el limite de peticiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No se obtuvo una decision verificable de AUTH; no se proceso nada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consulta un analisis propio",
+        "tags": [
+          "steganography"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "SecureTalk STEGO",
+    "description": "Validacion y analisis LSB de imagenes PNG y BMP. Cada operacion verifica el JWT y pide a AUTH una decision de autorizacion vigente.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number"
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "requestId"
+        ]
+      },
+      "AnalysisResponseDto": {
+        "type": "object",
+        "properties": {
+          "analysis_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filename": {
+            "type": "string",
+            "example": "muestra.png",
+            "description": "Nombre enviado por el cliente, sin ruta"
+          },
+          "sha256": {
+            "type": "string",
+            "description": "SHA-256 del archivo en hexadecimal",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "technique": {
+            "type": "string",
+            "example": "lsb_statistical_analysis"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sin_indicios",
+              "sospechoso",
+              "no_concluyente",
+              "error"
+            ],
+            "description": "Clasificacion indicativa: sospechoso es un indicio, no una prueba"
+          },
+          "indicators": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "anomaly_score es el mayor p-valor chi-cuadrado; threshold y lower_threshold son sus umbrales. estimated_payload_rate es la proporcion de muestras que usaria el mensaje, segun el analisis de pares de muestras, y max_prefix_payload_rate la misma medida en el inicio de la imagen. plaintext_run es la mayor racha de caracteres legibles en los primeros LSB; el texto nunca se devuelve. evidence lista los analisis que respaldan un resultado sospechoso. Sin datos suficientes, las medidas son null. Las variantes que la tecnica no puede analizar solo incluyen image.",
+            "example": {
+              "method": "chi_square_westfeld_pfitzmann+sample_pair_analysis+lsb_plaintext",
+              "anomaly_score": 0.999993,
+              "threshold": 0.95,
+              "lower_threshold": 0.05,
+              "estimated_payload_rate": 0.994,
+              "payload_rate_threshold": 0.08,
+              "max_prefix_payload_rate": 1,
+              "prefix_payload_rate_threshold": 0.15,
+              "plaintext_run": 0,
+              "plaintext_run_threshold": 16,
+              "evidence": [
+                "sample_pairs",
+                "chi_square"
+              ],
+              "image": {
+                "format": "png",
+                "width": 512,
+                "height": 384
+              },
+              "channels": {
+                "r": {
+                  "samples": 196608,
+                  "chi_square": 31.472094,
+                  "degrees_of_freedom": 53,
+                  "p_value": 0.991836,
+                  "max_p_value": 0.999993,
+                  "payload_rate": 0.996,
+                  "lsb_ones_ratio": 0.49942
+                }
+              }
+            }
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "ninguna",
+              "advertencia",
+              "cuarentena",
+              "rechazo"
+            ],
+            "description": "Politica aplicada segun la clasificacion"
+          },
+          "limitations": {
+            "type": "string",
+            "nullable": true,
+            "example": "Resultado indicativo, no concluyente: un resultado sospechoso es un indicio, no una prueba."
+          }
+        },
+        "required": [
+          "analysis_id",
+          "user_id",
+          "filename",
+          "sha256",
+          "technique",
+          "status",
+          "indicators",
+          "action",
+          "limitations"
+        ]
+      }
+    }
+  }
+}

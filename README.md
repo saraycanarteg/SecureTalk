@@ -38,6 +38,8 @@ docker compose exec stego-service npm run migration:run
 
 Con `NODE_ENV` distinto de `production`, Swagger de AUTH está en `http://localhost:3001/api/docs`.
 
+Las especificaciones exportadas están en [docs/openapi/auth-service.json](docs/openapi/auth-service.json) y [docs/openapi/stego-service.json](docs/openapi/stego-service.json). Para volver a exportarlas, con los servicios en marcha y `NODE_ENV` distinto de `production`, usa `http://localhost:3001/api/docs-json` y `http://localhost:3002/api/docs-json`.
+
 ## Pruebas de AUTH
 
 ```bash
