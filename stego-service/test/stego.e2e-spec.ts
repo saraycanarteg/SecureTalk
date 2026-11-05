@@ -15,6 +15,7 @@ import { configureApp } from './../src/app.setup';
 import { DETECTOR } from './../src/steganography/detector/detector.interface';
 import { Analysis } from './../src/steganography/entities/analysis.entity';
 import { MAX_IMAGE_PIXELS } from './../src/steganography/image/decoded-image';
+import { QuarantineStore } from './../src/steganography/quarantine/quarantine.store';
 import {
   assemblePng,
   buildBmp,
@@ -63,6 +64,7 @@ const deny: FakeHandler = (body, res) => sendJson(res, 200, decisionFor(body, fa
 
 describe('STEGO (e2e)', () => {
   const uploadDir = process.env.UPLOAD_DIR as string;
+  const quarantineDir = process.env.QUARANTINE_DIR as string;
   const detector = { analyze: jest.fn() };
 
   let app: NestExpressApplication;
@@ -130,10 +132,12 @@ describe('STEGO (e2e)', () => {
   };
 
   const storedFiles = () => readdirSync(uploadDir);
+  const quarantinedFiles = () => readdirSync(quarantineDir);
   const recordCount = () => dataSource.getRepository(Analysis).count();
 
   const expectNothingProcessed = async () => {
     expect(storedFiles()).toEqual([]);
+    expect(quarantinedFiles()).toEqual([]);
     await expect(recordCount()).resolves.toBe(0);
     expect(detector.analyze).not.toHaveBeenCalled();
   };
@@ -165,6 +169,9 @@ describe('STEGO (e2e)', () => {
     await dataSource.query(`TRUNCATE "analyses"`);
     rmSync(uploadDir, { recursive: true, force: true });
     mkdirSync(uploadDir, { recursive: true });
+    for (const name of quarantinedFiles()) {
+      rmSync(join(quarantineDir, name), { force: true });
+    }
 
     checks = [];
     handler = allow;
@@ -376,33 +383,91 @@ describe('STEGO (e2e)', () => {
       });
     });
 
-    it('borra el archivo si no queda en cuarentena', async () => {
+    it.each([
+      ['sin_indicios', 'ninguna'],
+      ['no_concluyente', 'advertencia'],
+    ])('%s: aplica %s y borra el archivo', async (status, action) => {
+      detector.analyze.mockResolvedValue({ ...DETECTOR_RESULT, status });
+
       const res = await analyze(await signToken(randomUUID())).expect(201);
 
+      expect(res.body).toMatchObject({ status, action });
       expect(storedFiles()).toEqual([]);
+      expect(quarantinedFiles()).toEqual([]);
       const saved = await dataSource.getRepository(Analysis).findOneByOrFail({
         id: res.body.analysis_id,
       });
       expect(saved.storedPath).toBeNull();
     });
 
-    it('conserva el archivo en cuarentena sin exponer su ruta', async () => {
-      detector.analyze.mockResolvedValue({
-        technique: 'prueba',
+    describe('cuarentena', () => {
+      const suspicious = {
+        ...DETECTOR_RESULT,
         status: 'sospechoso',
-        indicators: { anomaly_score: 0.82 },
-        limitations: 'Resultado indicativo',
+        indicators: { anomaly_score: 0.99 },
+      };
+
+      beforeEach(() => {
+        detector.analyze.mockResolvedValue(suspicious);
       });
 
-      const res = await analyze(await signToken(randomUUID())).expect(201);
+      it('mueve el archivo sospechoso a la carpeta aislada sin exponer su ruta', async () => {
+        const res = await analyze(await signToken(randomUUID())).expect(201);
 
-      expect(res.body).toMatchObject({ status: 'sospechoso', action: 'cuarentena' });
-      expect(res.body).not.toHaveProperty('stored_path');
-      expect(storedFiles()).toHaveLength(1);
-      const saved = await dataSource.getRepository(Analysis).findOneByOrFail({
-        id: res.body.analysis_id,
+        expect(res.body).toMatchObject({ status: 'sospechoso', action: 'cuarentena' });
+        expect(res.body).not.toHaveProperty('stored_path');
+        expect(storedFiles()).toEqual([]);
+        expect(quarantinedFiles()).toHaveLength(1);
+
+        const [name] = quarantinedFiles();
+        expect(name).not.toContain('muestra');
+        expect(readFileSync(join(quarantineDir, name))).toEqual(CONTENT);
+        const saved = await dataSource.getRepository(Analysis).findOneByOrFail({
+          id: res.body.analysis_id,
+        });
+        expect(saved.storedPath).toBe(join(quarantineDir, name));
       });
-      expect(saved.storedPath).toBe(join(uploadDir, storedFiles()[0]));
+
+      it('no publica el archivo por HTTP', async () => {
+        await analyze(await signToken(randomUUID())).expect(201);
+        const [name] = quarantinedFiles();
+
+        for (const path of [
+          `/${name}`,
+          `/quarantine/${name}`,
+          `/uploads/${name}`,
+          `/api/quarantine/${name}`,
+          `/api/steganography/${name}`,
+        ]) {
+          await server().get(path).expect(404);
+        }
+      });
+
+      it('no conserva el archivo si no se puede aislar', async () => {
+        jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        jest
+          .spyOn(QuarantineStore.prototype, 'move')
+          .mockRejectedValue(new Error('detalle del disco'));
+
+        const res = await analyze(await signToken(randomUUID())).expect(500);
+
+        expect(JSON.stringify(res.body)).not.toContain('detalle del disco');
+        expect(storedFiles()).toEqual([]);
+        expect(quarantinedFiles()).toEqual([]);
+        await expect(recordCount()).resolves.toBe(0);
+      });
+
+      it('quita el archivo de la cuarentena si no se pudo registrar', async () => {
+        jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        jest
+          .spyOn(dataSource.getRepository(Analysis).constructor.prototype, 'save')
+          .mockRejectedValue(new Error('detalle de la base'));
+
+        await analyze(await signToken(randomUUID())).expect(500);
+
+        expect(storedFiles()).toEqual([]);
+        expect(quarantinedFiles()).toEqual([]);
+      });
     });
 
     it('registra status=error si el detector falla y no filtra el detalle', async () => {

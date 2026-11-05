@@ -11,6 +11,7 @@ describe('validateEnv', () => {
     AUTH_BASE_URL: 'http://localhost:3001',
     STEGO_SERVICE_KEY: 'a'.repeat(32),
     UPLOAD_DIR: './uploads',
+    QUARANTINE_DIR: './quarantine',
   };
 
   it('usa los valores por defecto de autorizacion', () => {
@@ -30,6 +31,12 @@ describe('validateEnv', () => {
     expect(
       validateEnv({ ...base, NODE_ENV: 'development', AUTHZ_MODE: 'mock' }).AUTHZ_MODE,
     ).toBe('mock');
+  });
+
+  it('exige una carpeta de cuarentena distinta de la de subida', () => {
+    expect(() =>
+      validateEnv({ ...base, QUARANTINE_DIR: './carpeta/../uploads' }),
+    ).toThrow(/QUARANTINE_DIR/);
   });
 
   it('no muestra valores en el mensaje de error', () => {

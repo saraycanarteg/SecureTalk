@@ -21,6 +21,7 @@ import { DETECTOR } from './detector/detector.interface';
 import type { Detector, DetectorResult } from './detector/detector.interface';
 import { AnalysisResponseDto } from './dto/analysis-response.dto';
 import { Analysis } from './entities/analysis.entity';
+import { QuarantineStore } from './quarantine/quarantine.store';
 import { FILE_VALIDATOR } from './validation/file-validator.interface';
 import type { FileValidator } from './validation/file-validator.interface';
 
@@ -42,6 +43,7 @@ export class SteganographyService {
     private readonly detector: Detector,
     @Inject(FILE_VALIDATOR)
     private readonly validator: FileValidator,
+    private readonly quarantine: QuarantineStore,
   ) {}
 
   async analyze(
@@ -52,6 +54,7 @@ export class SteganographyService {
       throw new BadRequestException('Falta el archivo en el campo "file"');
     }
 
+    let currentPath = file.path;
     let keepFile = false;
     try {
       const validation = await this.validator.validate({
@@ -67,7 +70,9 @@ export class SteganographyService {
       const sha256 = await this.hashFile(file.path);
       const result = await this.runDetector(file.path, context);
       const action = resolveAction(result.status);
-      const quarantined = action === 'cuarentena';
+      const storedPath =
+        action === 'cuarentena' ? await this.quarantine.move(file.path) : null;
+      currentPath = storedPath ?? currentPath;
 
       const analysis = await this.analyses.save(
         this.analyses.create({
@@ -79,10 +84,10 @@ export class SteganographyService {
           status: result.status,
           action,
           limitations: result.limitations,
-          storedPath: quarantined ? file.path : null,
+          storedPath,
         }),
       );
-      keepFile = quarantined;
+      keepFile = storedPath !== null;
 
       this.logger.log(
         `analisis_registrado id=${analysis.id} userId=${analysis.userId} sha256=${analysis.sha256} estado=${analysis.status} accion=${analysis.action} requestId=${context.requestId}`,
@@ -90,7 +95,7 @@ export class SteganographyService {
       return this.toResponse(analysis);
     } finally {
       if (!keepFile) {
-        await this.removeFile(file.path, context);
+        await this.removeFile(currentPath, context);
       }
     }
   }

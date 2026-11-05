@@ -1,3 +1,5 @@
+import { resolve } from 'node:path';
+
 import { z } from 'zod';
 
 export const envSchema = z.object({
@@ -92,11 +94,21 @@ export const envSchema = z.object({
   UPLOAD_DIR: z
     .string()
     .min(1),
+
+  QUARANTINE_DIR: z
+    .string()
+    .min(1),
 }).refine(
   (env) => !(env.NODE_ENV === 'production' && env.AUTHZ_MODE === 'mock'),
   {
     path: ['AUTHZ_MODE'],
     message: 'mock no esta permitido con NODE_ENV=production',
+  },
+).refine(
+  (env) => resolve(env.UPLOAD_DIR) !== resolve(env.QUARANTINE_DIR),
+  {
+    path: ['QUARANTINE_DIR'],
+    message: 'debe ser una carpeta distinta de UPLOAD_DIR',
   },
 );
 

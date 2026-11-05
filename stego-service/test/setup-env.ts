@@ -30,5 +30,6 @@ Object.assign(process.env, {
   AUTH_TIMEOUT_MS: '300',
   AUTHZ_MODE: 'real',
   UPLOAD_DIR: join(workDir, 'uploads'),
+  QUARANTINE_DIR: join(workDir, 'quarantine'),
   TEST_JWT_PRIVATE_KEY_PATH: join(workDir, 'private.pem'),
 });

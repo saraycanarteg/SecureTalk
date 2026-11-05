@@ -85,12 +85,13 @@ services:
       DB_DATABASE: ${STEGO_POSTGRES_DB:?definir en .env}
       JWT_PUBLIC_KEY_PATH: /run/keys/jwt_public.pem
       AUTH_BASE_URL: http://auth-service:3001
-      UPLOAD_DIR: /app/uploads
+      UPLOAD_DIR: /app/data/uploads
+      QUARANTINE_DIR: /app/data/quarantine
     depends_on:
       stego-db:
         condition: service_healthy
     volumes:
-      - stego_uploads:/app/uploads
+      - stego_data:/app/data
       # STEGO solo recibe la llave publica.
       - type: bind
         source: ./keys/jwt_public.pem
@@ -116,4 +117,4 @@ networks:
 volumes:
   postgres_data:
   stego_db_data:
-  stego_uploads:
+  stego_data:

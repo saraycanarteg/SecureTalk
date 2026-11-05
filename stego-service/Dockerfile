@@ -12,7 +12,7 @@ WORKDIR /app
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-RUN mkdir -p /app/uploads && chown node:node /app/uploads
+RUN mkdir -p /app/data/uploads /app/data/quarantine && chown -R node:node /app/data && chmod -R 700 /app/data
 USER node
 EXPOSE 3002
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \

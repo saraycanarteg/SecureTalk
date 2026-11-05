@@ -12,6 +12,7 @@ import type { Env } from '../config/env.schema.js';
 import { DETECTOR } from './detector/detector.interface';
 import { LsbChiSquareDetector } from './detector/lsb-chi-square.detector';
 import { Analysis } from './entities/analysis.entity';
+import { QuarantineStore } from './quarantine/quarantine.store';
 import { SteganographyController } from './steganography.controller';
 import { SteganographyService } from './steganography.service';
 import { FILE_VALIDATOR, MAX_FILE_SIZE_BYTES } from './validation/file-validator.interface';
@@ -41,6 +42,7 @@ import { ImageFileValidator } from './validation/image-file.validator';
   controllers: [SteganographyController],
   providers: [
     SteganographyService,
+    QuarantineStore,
     { provide: DETECTOR, useClass: LsbChiSquareDetector },
     { provide: FILE_VALIDATOR, useClass: ImageFileValidator },
   ],
