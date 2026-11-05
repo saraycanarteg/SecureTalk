@@ -54,8 +54,8 @@ npm run test:e2e
 | PATCH | `/api/users/:id` | ADMIN | Implementado, falta aplicar RBAC |
 | POST, GET | `/api/roles` | ADMIN | Implementado, falta aplicar RBAC |
 | PATCH | `/api/roles/:id` | ADMIN | Implementado, falta aplicar RBAC |
-| POST | `/api/user-roles` | ADMIN | Pendiente |
-| DELETE | `/api/user-roles/:id` | ADMIN | Pendiente |
+| POST | `/api/user-roles` | ADMIN | Implementado, falta aplicar RBAC |
+| DELETE | `/api/user-roles/:id` | ADMIN | Implementado, falta aplicar RBAC |
 | POST | `/internal/authorization/check` | Solo STEGO, con `X-Service-Key` | Pendiente |
 
 ## Matriz de riesgos
