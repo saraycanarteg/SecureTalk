@@ -5146,6 +5146,19 @@
           "name": "T03 Firmado con otra llave Ed25519",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Firmado con una llave desechable que AUTH no conoce: no da acceso y debe responder 401.",
+                  "const b64url = (text) => btoa(text).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "const claims = {\"sub\":\"efefd2c8-9f00-4876-965a-20cf0ee5b0b7\",\"iss\":\"securetalk-auth\",\"aud\":\"securetalk-api\",\"iat\":1793850042,\"exp\":4102444800,\"jti\":\"05ed110d-ed01-4722-b1d9-861ec351b2d1\"};",
+                  "const signature = 'hPlYJWJAlJeFcEEe00wr7vx8yra-iq6zO2hYEDtUentDV1NcfPcT6LeTDAondS089Kjt0OF_arnGl4itlG57BQ';",
+                  "pm.variables.set('foreignKeyToken', [b64url('{\"alg\":\"EdDSA\"}'), b64url(JSON.stringify(claims)), signature].join('.'));"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -5163,7 +5176,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJlZmVmZDJjOC05ZjAwLTQ4NzYtOTY1YS0yMGNmMGVlNWIwYjciLCJpc3MiOiJzZWN1cmV0YWxrLWF1dGgiLCJhdWQiOiJzZWN1cmV0YWxrLWFwaSIsImlhdCI6MTc5Mzg1MDA0MiwiZXhwIjo0MTAyNDQ0ODAwLCJqdGkiOiIwNWVkMTEwZC1lZDAxLTQ3MjItYjFkOS04NjFlYzM1MWIyZDEifQ.hPlYJWJAlJeFcEEe00wr7vx8yra-iq6zO2hYEDtUentDV1NcfPcT6LeTDAondS089Kjt0OF_arnGl4itlG57BQ",
+                  "value": "{{foreignKeyToken}}",
                   "type": "string"
                 }
               ]
