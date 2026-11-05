@@ -216,6 +216,8 @@ write('lsb-100.bmp', encodeBmp(embedSequential(originalBmp, fullMessage)));
 write('lsb-25.png', encodePng(embedSequential(original, fullMessage.subarray(0, capacity / 4))));
 write('lsb-texto-plano-25.png', encodePng(embedSequential(original, plainMessage(capacity / 4))));
 write('lsb-disperso-10.png', encodePng(embedScattered(original, fullMessage.subarray(0, Math.floor(capacity / 10)), 7)));
+write('lsb-2.png', encodePng(embedSequential(original, fullMessage.subarray(0, Math.floor(capacity / 50)))));
+write('lsb-disperso-3.png', encodePng(embedScattered(original, fullMessage.subarray(0, Math.floor((capacity * 3) / 100)), 11)));
 
 // Filas sin filtrar de un patron RGB sencillo.
 function patternScanlines(width, height) {

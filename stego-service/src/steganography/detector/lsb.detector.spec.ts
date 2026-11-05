@@ -3,22 +3,56 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { buildPng, buildRgbPng, PNG_COLOR } from '../../../test/support/images';
+import {
+  buildBmp,
+  buildPng,
+  buildRgbPng,
+  PNG_COLOR,
+} from '../../../test/support/images';
 import { AnalyzableImage } from '../image/decoded-image';
 import { decodeImage } from '../image/image-decoder';
 import {
   chiSquareOfPairs,
+  CLEAN_PAYLOAD_RATE,
   CLEAN_THRESHOLD,
-  LsbChiSquareDetector,
+  LsbDetector,
   MIN_WINDOW_SAMPLES,
+  PAYLOAD_RATE_THRESHOLD,
+  PREFIX_PAYLOAD_RATE_THRESHOLD,
   SUSPICIOUS_THRESHOLD,
-} from './lsb-chi-square.detector';
+} from './lsb.detector';
 
 const SAMPLES_DIR = join(__dirname, '..', '..', '..', '..', 'samples');
 const sample = (name: string) => join(SAMPLES_DIR, name);
 
-describe('LsbChiSquareDetector', () => {
-  const detector = new LsbChiSquareDetector();
+const decodeSample = async (name: string) =>
+  (await decodeImage(readFileSync(sample(name)))) as AnalyzableImage;
+
+function toScanlines(samples: Buffer, width: number, height: number) {
+  const stride = width * 3;
+  const scanlines = Buffer.alloc(height * (stride + 1));
+  for (let row = 0; row < height; row++) {
+    samples.copy(
+      scanlines,
+      row * (stride + 1) + 1,
+      row * stride,
+      (row + 1) * stride,
+    );
+  }
+  return scanlines;
+}
+
+function pseudoRandomBits(count: number) {
+  const random = createHash('sha512');
+  let bits = Buffer.alloc(0);
+  for (let i = 0; bits.length * 8 < count; i++) {
+    bits = Buffer.concat([bits, random.copy().update(String(i)).digest()]);
+  }
+  return (i: number) => (bits[i >> 3] >> (i & 7)) & 1;
+}
+
+describe('LsbDetector', () => {
+  const detector = new LsbDetector();
 
   let dir: string;
   const analyzeBuffer = (content: Buffer) => {
@@ -39,34 +73,63 @@ describe('LsbChiSquareDetector', () => {
     it.each(['original.png', 'original.bmp'])(
       '%s no presenta indicios',
       async (name) => {
-        const result = await detector.analyze(sample(name));
+        const { status, indicators } = await detector.analyze(sample(name));
 
-        expect(result.status).toBe('sin_indicios');
-        expect(result.indicators.anomaly_score).toBeLessThan(CLEAN_THRESHOLD);
+        expect(status).toBe('sin_indicios');
+        expect(indicators.anomaly_score).toBeLessThan(CLEAN_THRESHOLD);
+        expect(indicators.estimated_payload_rate).toBeLessThan(
+          CLEAN_PAYLOAD_RATE,
+        );
+        expect(indicators.evidence).toEqual([]);
       },
     );
   });
 
   describe('muestras con mensaje oculto', () => {
     it.each([
-      'lsb-100.png',
-      'lsb-100.bmp',
-      'lsb-25.png',
-      'lsb-texto-plano-25.png',
-    ])('%s resulta sospechosa', async (name) => {
-      const result = await detector.analyze(sample(name));
+      ['lsb-100.png', 0.9, 1],
+      ['lsb-100.bmp', 0.9, 1],
+      ['lsb-25.png', 0.2, 0.3],
+      ['lsb-texto-plano-25.png', 0.15, 0.3],
+      ['lsb-disperso-10.png', 0.08, 0.13],
+    ])(
+      '%s resulta sospechosa y estima la carga real',
+      async (name, min, max) => {
+        const { status, indicators } = await detector.analyze(sample(name));
 
-      expect(result.status).toBe('sospechoso');
-      expect(result.indicators.anomaly_score).toBeGreaterThanOrEqual(
+        expect(status).toBe('sospechoso');
+        expect(indicators.evidence).toContain('sample_pairs');
+        expect(indicators.estimated_payload_rate).toBeGreaterThanOrEqual(min);
+        expect(indicators.estimated_payload_rate).toBeLessThanOrEqual(max);
+      },
+    );
+
+    it('detecta un mensaje del 2 % por las porciones iniciales', async () => {
+      const { status, indicators } = await detector.analyze(
+        sample('lsb-2.png'),
+      );
+
+      expect(status).toBe('sospechoso');
+      expect(indicators.estimated_payload_rate).toBeLessThan(
+        PAYLOAD_RATE_THRESHOLD,
+      );
+      expect(indicators.max_prefix_payload_rate).toBeGreaterThanOrEqual(
+        PREFIX_PAYLOAD_RATE_THRESHOLD,
+      );
+    });
+
+    it('la insercion completa tambien la confirma chi-cuadrado', async () => {
+      const { indicators } = await detector.analyze(sample('lsb-100.png'));
+
+      expect(indicators.evidence).toEqual(['sample_pairs', 'chi_square']);
+      expect(indicators.anomaly_score).toBeGreaterThanOrEqual(
         SUSPICIOUS_THRESHOLD,
       );
     });
 
     it('la muestra guarda un mensaje real y solo cambia el bit menos significativo', async () => {
-      const decode = async (name: string) =>
-        (await decodeImage(readFileSync(sample(name)))) as AnalyzableImage;
-      const original = await decode('original.png');
-      const stego = await decode('lsb-100.png');
+      const original = await decodeSample('original.png');
+      const stego = await decodeSample('lsb-100.png');
 
       expect(stego.samples.length).toBe(original.samples.length);
       expect(
@@ -86,27 +149,64 @@ describe('LsbChiSquareDetector', () => {
       );
     });
 
-    it('limitacion conocida: una carga dispersa del 10 % no se detecta', async () => {
-      const result = await detector.analyze(sample('lsb-disperso-10.png'));
+    it('detecta una insercion en un solo canal', async () => {
+      const { samples, width, height } = await decodeSample('original.png');
+      const blueOnly = Buffer.from(samples);
+      const bitAt = pseudoRandomBits(width * height);
+      for (let i = 0; i < width * height; i++) {
+        const blue = i * 3 + 2;
+        blueOnly[blue] = (blueOnly[blue] & 0xfe) | bitAt(i);
+      }
+
+      const result = await analyzeBuffer(
+        buildPng(width, height, toScanlines(blueOnly, width, height)),
+      );
+
+      expect(result.status).toBe('sospechoso');
+    });
+
+    it('en un BMP detecta un mensaje en la primera fila visible, al final del archivo', async () => {
+      const { samples, width, height } = await decodeSample('original.bmp');
+      const stored = Buffer.from(samples);
+      const bytes = Math.floor(stored.length * 0.03);
+      const bitAt = pseudoRandomBits(bytes);
+      const lastRow = (height - 1) * width * 3;
+      for (let i = 0; i < bytes; i++) {
+        // Recorre las filas desde la ultima guardada, que es la primera visible.
+        const row = Math.floor(i / (width * 3));
+        const position = lastRow - row * width * 3 + (i % (width * 3));
+        stored[position] = (stored[position] & 0xfe) | bitAt(i);
+      }
+
+      const result = await analyzeBuffer(buildBmp(width, height, stored));
+
+      expect(result.status).toBe('sospechoso');
+    });
+
+    it('limitacion conocida: una carga dispersa del 3 % no se detecta', async () => {
+      const result = await detector.analyze(sample('lsb-disperso-3.png'));
 
       expect(result.status).toBe('sin_indicios');
     });
   });
 
   describe('limitaciones y casos limite', () => {
-    it('limitacion conocida: un degradado perfecto da un falso positivo', async () => {
+    it('un degradado perfecto no se clasifica como sospechoso', async () => {
       // Cada valor aparece el mismo numero de veces, igual que tras una insercion.
-      const gradient = buildRgbPng(256, 256, (x) => [x, x, x]);
+      const result = await detector.analyze(sample('limites/degradado.png'));
 
-      const result = await analyzeBuffer(gradient);
-
-      expect(result.status).toBe('sospechoso');
+      expect(result.status).toBe('no_concluyente');
+      expect(result.indicators.anomaly_score).toBeGreaterThanOrEqual(
+        SUSPICIOUS_THRESHOLD,
+      );
+      expect(result.indicators.estimated_payload_rate).toBeLessThan(
+        CLEAN_PAYLOAD_RATE,
+      );
+      expect(result.limitations).toContain('no lo confirman');
     });
 
     it('una imagen de un solo color no alcanza para concluir', async () => {
-      const result = await analyzeBuffer(
-        buildRgbPng(100, 100, () => [120, 80, 40]),
-      );
+      const result = await detector.analyze(sample('limites/un-color.png'));
 
       expect(result.status).toBe('no_concluyente');
       expect(result.indicators.anomaly_score).toBeNull();
@@ -119,6 +219,7 @@ describe('LsbChiSquareDetector', () => {
       const result = await analyzeBuffer(buildRgbPng(side, side));
 
       expect(result.status).toBe('no_concluyente');
+      expect(result.indicators.estimated_payload_rate).toBeNull();
     });
 
     it('una imagen con todos sus valores pares no se confunde con una insercion', async () => {
@@ -130,7 +231,7 @@ describe('LsbChiSquareDetector', () => {
         ]),
       );
 
-      expect(result.status).toBe('sin_indicios');
+      expect(result.status).not.toBe('sospechoso');
     });
 
     it('una variante integra no analizable no es concluyente y explica el motivo', async () => {
@@ -163,10 +264,14 @@ describe('LsbChiSquareDetector', () => {
       expect(technique).toBe('lsb_statistical_analysis');
       expect(limitations).toContain('Resultado indicativo, no concluyente');
       expect(indicators).toMatchObject({
-        method: 'chi_square_westfeld_pfitzmann',
+        method: 'chi_square_westfeld_pfitzmann+sample_pair_analysis',
         anomaly_score: expect.any(Number),
         threshold: SUSPICIOUS_THRESHOLD,
         lower_threshold: CLEAN_THRESHOLD,
+        estimated_payload_rate: expect.any(Number),
+        payload_rate_threshold: PAYLOAD_RATE_THRESHOLD,
+        max_prefix_payload_rate: expect.any(Number),
+        prefix_payload_rate_threshold: PREFIX_PAYLOAD_RATE_THRESHOLD,
         image: { format: 'png', width: 512, height: 384 },
       });
       const channels = indicators.channels as Record<string, any>;
@@ -177,6 +282,7 @@ describe('LsbChiSquareDetector', () => {
         degrees_of_freedom: expect.any(Number),
         p_value: expect.any(Number),
         max_p_value: expect.any(Number),
+        payload_rate: expect.any(Number),
         lsb_ones_ratio: expect.any(Number),
       });
       expect(channels.r.lsb_ones_ratio).toBeCloseTo(0.5, 1);
@@ -188,37 +294,6 @@ describe('LsbChiSquareDetector', () => {
       );
 
       expect(JSON.parse(JSON.stringify(indicators))).toEqual(indicators);
-    });
-
-    it('detecta una insercion en un solo canal', async () => {
-      const png = await decodeImage(readFileSync(sample('original.png')));
-      const { samples, width, height } = png as AnalyzableImage;
-      const blueOnly = Buffer.from(samples);
-      const random = createHash('sha512');
-      let bits = Buffer.alloc(0);
-      for (let i = 0; bits.length * 8 < width * height; i++) {
-        bits = Buffer.concat([bits, random.copy().update(String(i)).digest()]);
-      }
-      for (let i = 0; i < width * height; i++) {
-        const blue = i * 3 + 2;
-        blueOnly[blue] =
-          (blueOnly[blue] & 0xfe) | ((bits[i >> 3] >> (i & 7)) & 1);
-      }
-
-      const stride = width * 3;
-      const scanlines = Buffer.alloc(height * (stride + 1));
-      for (let row = 0; row < height; row++) {
-        blueOnly.copy(
-          scanlines,
-          row * (stride + 1) + 1,
-          row * stride,
-          (row + 1) * stride,
-        );
-      }
-
-      const result = await analyzeBuffer(buildPng(width, height, scanlines));
-
-      expect(result.status).toBe('sospechoso');
     });
   });
 });

@@ -10,7 +10,7 @@ import { AuthModule } from '../auth/auth.module';
 import { AuthzModule } from '../authz/authz.module';
 import type { Env } from '../config/env.schema.js';
 import { DETECTOR } from './detector/detector.interface';
-import { LsbChiSquareDetector } from './detector/lsb-chi-square.detector';
+import { LsbDetector } from './detector/lsb.detector';
 import { Analysis } from './entities/analysis.entity';
 import { QuarantineStore } from './quarantine/quarantine.store';
 import { SteganographyController } from './steganography.controller';
@@ -43,7 +43,7 @@ import { ImageFileValidator } from './validation/image-file.validator';
   providers: [
     SteganographyService,
     QuarantineStore,
-    { provide: DETECTOR, useClass: LsbChiSquareDetector },
+    { provide: DETECTOR, useClass: LsbDetector },
     { provide: FILE_VALIDATOR, useClass: ImageFileValidator },
   ],
 })

@@ -133,6 +133,8 @@ describe('T09: analisis de muestras originales y con carga LSB (e2e)', () => {
     'lsb-100.bmp',
     'lsb-25.png',
     'lsb-texto-plano-25.png',
+    'lsb-disperso-10.png',
+    'lsb-2.png',
   ])('%s: sospechoso y en cuarentena', async (name) => {
     const content = readFileSync(join(SAMPLES_DIR, name));
 
@@ -143,9 +145,13 @@ describe('T09: analisis de muestras originales y con carga LSB (e2e)', () => {
       action: 'cuarentena',
       sha256: sha256(content),
     });
-    expect(body.indicators.anomaly_score).toBeGreaterThanOrEqual(
-      body.indicators.threshold,
-    );
+    expect(body.indicators.evidence).toContain('sample_pairs');
+    expect(
+      body.indicators.estimated_payload_rate >=
+        body.indicators.payload_rate_threshold ||
+        body.indicators.max_prefix_payload_rate >=
+          body.indicators.prefix_payload_rate_threshold,
+    ).toBe(true);
     expect(body.limitations).toContain('un indicio, no una prueba');
 
     const [stored, ...others] = quarantined();
@@ -153,11 +159,11 @@ describe('T09: analisis de muestras originales y con carga LSB (e2e)', () => {
     expect(readFileSync(join(quarantineDir, stored))).toEqual(content);
   });
 
-  it('limitacion documentada: una carga dispersa del 10 % no se detecta', async () => {
-    const { body } = await analyzeSample('lsb-disperso-10.png');
+  it('limitacion documentada: una carga dispersa del 3 % no se detecta', async () => {
+    const { body } = await analyzeSample('lsb-disperso-3.png');
 
     expect(body).toMatchObject({ status: 'sin_indicios', action: 'ninguna' });
-    expect(body.limitations).toContain('cargas pequenas o dispersas');
+    expect(body.limitations).toContain('cargas muy pequenas');
   });
 
   it('el mismo contenido da metricas distintas con y sin carga, y se pueden consultar', async () => {
@@ -170,6 +176,9 @@ describe('T09: analisis de muestras originales y con carga LSB (e2e)', () => {
     );
     for (const channel of ['r', 'g', 'b']) {
       // La carga iguala los pares de valores: el estadistico cae con todo el canal.
+      expect(stego.indicators.channels[channel].payload_rate).toBeGreaterThan(
+        original.indicators.channels[channel].payload_rate,
+      );
       expect(stego.indicators.channels[channel].chi_square).toBeLessThan(
         original.indicators.channels[channel].chi_square,
       );

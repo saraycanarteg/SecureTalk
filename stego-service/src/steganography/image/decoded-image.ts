@@ -47,6 +47,8 @@ export interface AnalyzableImage extends ImageInfo {
   samples: Buffer;
   bytesPerPixel: number;
   channels: ColorChannel[];
+  // Las filas estan guardadas de abajo hacia arriba, como en un BMP normal.
+  bottomUp: boolean;
 }
 
 // Archivo integro en una variante que la tecnica LSB no puede interpretar.

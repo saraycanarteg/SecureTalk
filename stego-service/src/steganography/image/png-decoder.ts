@@ -93,6 +93,7 @@ export async function decodePng(file: Buffer): Promise<DecodedImage> {
     samples: unfilter(raw, height, width * bytesPerPixel, bytesPerPixel),
     bytesPerPixel,
     channels: CHANNELS_BY_COLOR_TYPE[header.colorType],
+    bottomUp: false,
   };
 }
 

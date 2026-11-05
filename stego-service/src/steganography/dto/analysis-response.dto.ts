@@ -29,14 +29,21 @@ export class AnalysisResponseDto {
     type: 'object',
     additionalProperties: true,
     description:
-      'anomaly_score es el mayor p-valor chi-cuadrado obtenido; threshold y lower_threshold separan ' +
-      'las clasificaciones. Sin datos suficientes, anomaly_score es null. Las variantes que la tecnica ' +
-      'no puede analizar solo incluyen image.',
+      'anomaly_score es el mayor p-valor chi-cuadrado; threshold y lower_threshold son sus umbrales. ' +
+      'estimated_payload_rate es la proporcion de muestras que usaria el mensaje, segun el analisis de ' +
+      'pares de muestras, y max_prefix_payload_rate la misma medida en el inicio de la imagen. evidence ' +
+      'lista los analisis que respaldan un resultado sospechoso. Sin datos suficientes, las medidas son ' +
+      'null. Las variantes que la tecnica no puede analizar solo incluyen image.',
     example: {
-      method: 'chi_square_westfeld_pfitzmann',
+      method: 'chi_square_westfeld_pfitzmann+sample_pair_analysis',
       anomaly_score: 0.999993,
       threshold: 0.95,
       lower_threshold: 0.05,
+      estimated_payload_rate: 0.994,
+      payload_rate_threshold: 0.08,
+      max_prefix_payload_rate: 1,
+      prefix_payload_rate_threshold: 0.15,
+      evidence: ['sample_pairs', 'chi_square'],
       image: { format: 'png', width: 512, height: 384 },
       channels: {
         r: {
@@ -45,6 +52,7 @@ export class AnalysisResponseDto {
           degrees_of_freedom: 53,
           p_value: 0.991836,
           max_p_value: 0.999993,
+          payload_rate: 0.996,
           lsb_ones_ratio: 0.49942,
         },
       },

@@ -85,6 +85,7 @@ export function decodeBmp(file: Buffer): DecodedImage {
     analyzable: true,
     samples,
     bytesPerPixel,
+    bottomUp: signedHeight > 0,
     channels: [
       { name: 'r', offset: 2 },
       { name: 'g', offset: 1 },
