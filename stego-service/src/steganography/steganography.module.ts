@@ -15,7 +15,7 @@ import { Analysis } from './entities/analysis.entity';
 import { SteganographyController } from './steganography.controller';
 import { SteganographyService } from './steganography.service';
 import { FILE_VALIDATOR, MAX_FILE_SIZE_BYTES } from './validation/file-validator.interface';
-import { PlaceholderFileValidator } from './validation/placeholder.file-validator';
+import { ImageFileValidator } from './validation/image-file.validator';
 
 @Module({
   imports: [
@@ -42,7 +42,7 @@ import { PlaceholderFileValidator } from './validation/placeholder.file-validato
   providers: [
     SteganographyService,
     { provide: DETECTOR, useClass: PlaceholderDetector },
-    { provide: FILE_VALIDATOR, useClass: PlaceholderFileValidator },
+    { provide: FILE_VALIDATOR, useClass: ImageFileValidator },
   ],
 })
 export class SteganographyModule {}

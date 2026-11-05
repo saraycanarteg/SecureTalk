@@ -15,12 +15,22 @@ import { configureApp } from './../src/app.setup';
 import { DETECTOR } from './../src/steganography/detector/detector.interface';
 import { PlaceholderDetector } from './../src/steganography/detector/placeholder.detector';
 import { Analysis } from './../src/steganography/entities/analysis.entity';
+import { MAX_IMAGE_PIXELS } from './../src/steganography/image/decoded-image';
+import {
+  assemblePng,
+  buildBmp,
+  buildRgbPng,
+  pngChunk,
+  pngHeader,
+  pngOfExactSize,
+} from './support/images';
 
 const ISSUER = 'securetalk-auth-test';
 const AUDIENCE = 'securetalk-api-test';
 const SERVICE_KEY = 'clave-de-servicio-solo-para-pruebas-e2e';
 const FAKE_AUTH_PORT = 45871;
-const CONTENT = Buffer.from('contenido-de-prueba');
+const CONTENT = buildRgbPng(4, 4);
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const CHECK_PATH = '/internal/authorization/check';
 
 interface CheckCall {
@@ -95,10 +105,17 @@ describe('STEGO (e2e)', () => {
 
   const server = () => request(app.getHttpServer());
 
-  const analyze = (token?: string, content: Buffer = CONTENT) => {
+  const analyze = (
+    token?: string,
+    content: Buffer = CONTENT,
+    file: { filename: string; contentType: string } = {
+      filename: 'muestra.png',
+      contentType: 'image/png',
+    },
+  ) => {
     const req = server()
       .post('/api/steganography/analyze')
-      .attach('file', content, 'muestra.png');
+      .attach('file', content, file);
     return token ? req.set('Authorization', `Bearer ${token}`) : req;
   };
 
@@ -409,7 +426,7 @@ describe('STEGO (e2e)', () => {
     });
 
     it('responde 413 si supera 10 MB, sin archivo ni registro', async () => {
-      const tooLarge = Buffer.alloc(10 * 1024 * 1024 + 1);
+      const tooLarge = Buffer.alloc(MAX_FILE_SIZE + 1);
 
       await analyze(await signToken(randomUUID()), tooLarge).expect(413);
 
@@ -417,7 +434,7 @@ describe('STEGO (e2e)', () => {
     });
 
     it('acepta un archivo de exactamente 10 MB', async () => {
-      const limit = Buffer.alloc(10 * 1024 * 1024);
+      const limit = pngOfExactSize(MAX_FILE_SIZE);
 
       await analyze(await signToken(randomUUID()), limit).expect(201);
     });
@@ -430,6 +447,46 @@ describe('STEGO (e2e)', () => {
 
       await expectNothingProcessed();
     });
+  });
+
+  describe('T10: archivos rechazados', () => {
+    const png = { filename: 'muestra.png', contentType: 'image/png' };
+    const corruptCrc = Buffer.from(CONTENT);
+    corruptCrc[corruptCrc.length - 20] ^= 0xff;
+    const bomb = assemblePng(
+      pngHeader(
+        Math.ceil(Math.sqrt(MAX_IMAGE_PIXELS)) + 1,
+        Math.ceil(Math.sqrt(MAX_IMAGE_PIXELS)) + 1,
+      ),
+      pngChunk('IDAT', Buffer.alloc(16)),
+      pngChunk('IEND'),
+    );
+
+    const rejected: [string, number, Buffer, typeof png][] = [
+      ['otra extension', 415, CONTENT, { filename: 'virus.exe', contentType: 'image/png' }],
+      ['otro tipo de contenido', 415, CONTENT, { filename: 'a.png', contentType: 'text/html' }],
+      ['contenido sin firma de imagen', 415, Buffer.from('<script>alert(1)</script>'), png],
+      ['BMP renombrado a .png', 415, buildBmp(1, 1, Buffer.alloc(4)), png],
+      ['archivo vacio', 400, Buffer.alloc(0), png],
+      ['PNG truncado', 400, CONTENT.subarray(0, CONTENT.length - 10), png],
+      ['PNG con CRC incorrecto', 400, corruptCrc, png],
+      ['PNG con datos anexados', 400, Buffer.concat([CONTENT, Buffer.from('PK')]), png],
+      ['bomba de descompresion', 413, bomb, png],
+    ];
+
+    it.each(rejected)(
+      '%s: responde %i sin analizar, sin guardar y sin registro',
+      async (_name, status, content, file) => {
+        const res = await analyze(await signToken(randomUUID()), content, file).expect(status);
+
+        expect(res.body).toEqual({
+          statusCode: status,
+          message: expect.any(String),
+          requestId: expect.any(String),
+        });
+        await expectNothingProcessed();
+      },
+    );
   });
 
   describe('GET /api/steganography/results/:id', () => {
