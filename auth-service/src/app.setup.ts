@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 import { AuthModule } from './auth/auth.module';
 import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware.js';
 import type { Env } from './config/env.schema.js';
+import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
 
 // Compartido entre main.ts y las pruebas e2e para probar la misma configuracion.
@@ -55,7 +56,7 @@ function setupSwagger(app: NestExpressApplication): void {
       .setVersion('1.0')
       .addBearerAuth()
       .build(),
-    { include: [AppModule, AuthModule, UsersModule] },
+    { include: [AppModule, AuthModule, UsersModule, RolesModule] },
   );
   SwaggerModule.setup('api/docs', app, document);
 }
