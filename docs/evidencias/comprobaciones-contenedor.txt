@@ -1,0 +1,30 @@
+Comprobaciones dentro de los contenedores. Solo nombres y permisos, nunca el contenido de las llaves.
+
+== Usuario con el que corre cada servicio (id -un)
+auth-service:  node
+stego-service: node
+
+== Llaves que recibe AUTH (ls -1 /run/keys)
+auth.crt
+auth.key
+jwt_private.pem
+jwt_public.pem
+
+== Llaves que recibe STEGO (ls -1 /run/keys): sin llaves privadas
+auth.crt
+jwt_public.pem
+
+== Carpetas de STEGO: permisos y dueno (stat)
+700 node /app/data/uploads
+700 node /app/data/quarantine
+
+== Archivos en cuarentena: permisos y dueno, primeros 3 (nombres aleatorios)
+400 node /app/data/quarantine/3fe0ed36-75c3-4caf-bc57-54989ef2d052
+400 node /app/data/quarantine/ff784956-686c-404e-b2d6-900e272472ab
+400 node /app/data/quarantine/cd1d68d9-075e-41a1-a72f-b237a000b2cd
+
+== Puerto interno 3443 de AUTH: no se publica en el anfitrion (docker compose port)
+auth-service:3443 -> sin publicar
+
+== Certificado que presenta AUTH a STEGO por la red interna
+verificado=true protocolo=TLSv1.3 cn=auth-service

@@ -78,3 +78,7 @@ La matriz de activos, amenazas, vulnerabilidades, riesgos y controles está en [
 ## Análisis esteganográfico
 
 El método, sus parámetros, resultados y limitaciones están en [docs/estegoanalisis.md](docs/estegoanalisis.md).
+
+## Evidencias
+
+Los resultados de las pruebas y las bitácoras depuradas están en [docs/evidencias/](docs/evidencias/README.md).

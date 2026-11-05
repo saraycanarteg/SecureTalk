@@ -1,0 +1,318 @@
+## Unitarias
+> auth-service@0.0.1 test
+> node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose --reporters=default
+PASS src/internal-authorization/action-permissions.spec.ts
+  rolesAllowedFor
+    √ steganography.analyze se permite a ADMIN y ANALYST, nunca a USER (8 ms)
+    √ steganography.results.read se permite a ADMIN y ANALYST, nunca a USER (1 ms)
+    √ la accion "steganography.delete" es desconocida (1 ms)
+    √ la accion "" es desconocida (1 ms)
+    √ la accion "constructor" es desconocida
+    √ la accion "__proto__" es desconocida
+    √ la accion "toString" es desconocida (1 ms)
+PASS src/common/security/password-hash.spec.ts
+  password-hash
+    √ usa Argon2id con 19 MiB, 2 iteraciones y paralelismo 1 (46 ms)
+    √ verifica solo la contrasena correcta (105 ms)
+PASS src/config/env.schema.spec.ts
+  validateEnv: canal interno
+    √ el HTTPS interno es opcional fuera de produccion (10 ms)
+    √ en produccion exige el HTTPS interno (22 ms)
+    √ acepta el certificado junto con su llave (1 ms)
+    √ se niega a arrancar con solo el certificado (2 ms)
+    √ se niega a arrancar con solo la llave (4 ms)
+PASS src/common/validators/password-policy.spec.ts
+  meetsPasswordPolicy
+    √ acepta minuscula, mayuscula y digito (8 ms)
+    √ acepta minuscula, mayuscula y simbolo (1 ms)
+    √ acepta minuscula, digito y simbolo (1 ms)
+    √ acepta mayuscula, digito y simbolo
+    √ acepta los 4 tipos (1 ms)
+    √ acepta letras con tilde
+    √ rechaza menos de 8 caracteres
+    √ rechaza solo 2 tipos
+    √ rechaza solo 1 tipo
+    √ rechaza mas de 128 caracteres
+    √ rechaza un valor que no es texto
+PASS src/common/middleware/request-id/request-id.middleware.spec.ts
+  RequestIdMiddleware
+    √ conserva un identificador valido (8 ms)
+    √ genera uno nuevo si falta (2 ms)
+    √ descarta un valor que podria inyectar lineas en los logs (1 ms)
+PASS src/common/pipes/cedula/cedula.pipe.spec.ts
+  isValidCedula
+    √ acepta 1710034065 (5 ms)
+    √ acepta 0926687856
+    √ rechaza digito verificador incorrecto
+    √ rechaza provincia 00
+    √ rechaza provincia 25 (1 ms)
+    √ rechaza tercer digito mayor a 5
+    √ rechaza menos de 10 digitos (1 ms)
+    √ rechaza mas de 10 digitos
+    √ rechaza caracteres no numericos
+    √ rechaza todos ceros (1 ms)
+  CedulaPipe
+    √ devuelve el cuerpo intacto si la cedula es valida
+    √ permite un cuerpo sin cedula (1 ms)
+    √ responde 400 con una cedula invalida (20 ms)
+PASS src/common/filters/all-exceptions/all-exceptions.filter.spec.ts
+  AllExceptionsFilter
+    √ no expone detalles de un error inesperado (25 ms)
+    √ conserva el mensaje de una excepcion HTTP de cliente (1 ms)
+PASS src/internal-authorization/service-key.guard.spec.ts
+  ServiceKeyGuard: canal
+    √ en produccion rechaza la clave correcta si llega sin cifrar (22 ms)
+    √ en produccion acepta la clave correcta por HTTPS (1 ms)
+    √ en produccion rechaza una clave incorrecta aunque llegue por HTTPS (1 ms)
+    √ en desarrollo permite HTTP para las pruebas manuales (1 ms)
+PASS src/auth/roles.guard.spec.ts
+  RolesGuard
+    √ permite si uno de los roles vigentes es requerido (4 ms)
+    √ deniega si ningun rol vigente es requerido (10 ms)
+    √ deniega a un usuario sin roles
+    √ deniega por defecto si la ruta no declara @Roles (1 ms)
+PASS src/health/health.controller.spec.ts
+  HealthController
+    √ responde ok cuando la base de datos contesta (5 ms)
+    √ responde 503 sin detalles cuando la base de datos falla (1 ms)
+Test Suites: 10 passed, 10 total
+Tests:       53 passed, 53 total
+Snapshots:   0 total
+Time:        2.958 s, estimated 3 s
+Ran all test suites.
+
+## De extremo a extremo
+> auth-service@0.0.1 test:e2e
+> node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand --verbose --reporters=default
+PASS test/internal-authorization.e2e-spec.ts (5.324 s)
+  POST /internal/authorization/check (e2e)
+    autenticacion de STEGO
+      √ responde 401 sin la cabecera (60 ms)
+      √ responde 401 con otra clave del mismo largo (15 ms)
+      √ responde 401 con una clave mas corta (13 ms)
+      √ responde 401 con una clave mas larga (13 ms)
+      √ responde 401 con una clave vacia (13 ms)
+      √ un JWT de ADMIN no reemplaza a la clave de servicio (79 ms)
+      √ comprueba la clave antes de validar el cuerpo (13 ms)
+      √ la ruta no lleva el prefijo /api (15 ms)
+    permite
+      √ responde exactamente lo que pide el contrato (87 ms)
+      √ ADMIN en steganography.analyze (78 ms)
+      √ ADMIN en steganography.results.read (65 ms)
+      √ ANALYST en steganography.analyze (62 ms)
+      √ ANALYST en steganography.results.read (61 ms)
+      √ un usuario con USER y ANALYST acumula el permiso (68 ms)
+      √ acepta resource_id con un UUID (59 ms)
+      √ acepta resource_id con un texto sin validar (58 ms)
+    deniega con HTTP 200
+      √ T04: usuario con rol USER en steganography.analyze (59 ms)
+      √ T04: usuario con rol USER en steganography.results.read (62 ms)
+      √ usuario sin roles (55 ms)
+      √ rol no incluido en la matriz, aunque tenga un nombre parecido (62 ms)
+      √ T07: rol retirado con el mismo JWT vigente (69 ms)
+      √ rol desactivado (59 ms)
+      √ usuario inactivo (73 ms)
+      √ usuario con soft delete (67 ms)
+      √ usuario que ya no existe (17 ms)
+      √ token revocado por logout (68 ms)
+      √ token vencido con firma valida (56 ms)
+      √ accion desconocida steganography.delete, aunque sea ADMIN (61 ms)
+      √ accion desconocida admin, aunque sea ADMIN (59 ms)
+      √ accion desconocida constructor, aunque sea ADMIN (62 ms)
+      √ accion desconocida __proto__, aunque sea ADMIN (57 ms)
+    sin decision: responde un error que STEGO trata como 503
+      √ token manipulado (54 ms)
+      √ token firmado con otra llave (61 ms)
+      √ token de otro emisor (54 ms)
+      √ texto que no es un JWT (11 ms)
+    cuerpo
+      √ responde 400 sin subject_token (13 ms)
+      √ responde 400 sin action (12 ms)
+      √ responde 400 tipos incorrectos (12 ms)
+      √ no acepta permisos enviados en el cuerpo (55 ms)
+    registro
+      √ registra cada decision sin el JWT ni la clave (114 ms)
+      √ un salto de linea en la accion o el recurso no crea otra linea en el log (57 ms)
+PASS test/users.e2e-spec.ts
+  /api/users (e2e)
+    √ no expone el borrado ni la consulta individual que genero Nest (59 ms)
+    POST
+      √ crea el usuario y guarda la contrasena con Argon2id (133 ms)
+      √ nunca devuelve la contrasena ni su hash (61 ms)
+      √ el usuario creado puede iniciar sesion (88 ms)
+      √ responde 400 con cedula con digito verificador incorrecto (29 ms)
+      √ responde 400 con cedula con letras (30 ms)
+      √ responde 400 con contrasena corta (29 ms)
+      √ responde 400 con contrasena con solo 2 tipos (32 ms)
+      √ responde 400 con email invalido (30 ms)
+      √ responde 400 con username con caracteres no permitidos (29 ms)
+      √ responde 400 con fecha invalida (29 ms)
+      √ responde 400 con campo ajeno al contrato (26 ms)
+      √ responde 400 con estado al crear (26 ms)
+      √ responde 409 si el username ya existe (89 ms)
+      √ responde 409 si el email ya existe (92 ms)
+      √ responde 409 si el cedula ya existe (87 ms)
+      √ trata el email sin distinguir mayusculas (87 ms)
+    GET
+      √ pagina el listado sin exponer hashes (111 ms)
+      √ aplica valores por defecto (27 ms)
+      √ responde 400 con page=0 (25 ms)
+      √ responde 400 con limit=0 (25 ms)
+      √ responde 400 con limit=101 (24 ms)
+      √ responde 400 con page=abc (27 ms)
+      √ responde 400 con page=1e300 (28 ms)
+      √ responde 400 con page=1000001 (26 ms)
+    PATCH /:id
+      √ actualiza los campos enviados (74 ms)
+      √ desactiva sin borrar y el usuario ya no puede iniciar sesion (98 ms)
+      √ cambia la contrasena aplicando la politica (163 ms)
+      √ conserva el hash si no se envia contrasena (97 ms)
+      √ valida la cedula si viene en el cuerpo (59 ms)
+      √ responde 400 con null en vez de fallar en la base de datos (77 ms)
+      √ responde 409 si el username ya pertenece a otro usuario (98 ms)
+      √ responde 404 si no existe y 400 si el identificador no es UUID (31 ms)
+PASS test/auth.e2e-spec.ts
+  AUTH (e2e)
+    POST /api/auth/login
+      √ emite un JWT EdDSA con los claims exigidos ante credenciales validas (86 ms)
+      √ responde igual con contrasena invalida, usuario inexistente o inactivo (116 ms)
+      √ rechaza a un usuario con soft delete (49 ms)
+      √ rechaza campos ajenos al contrato (15 ms)
+      √ responde 429 tras 5 fallos, incluso con la contrasena correcta (176 ms)
+      √ aplica el mismo limite a una cuenta inexistente (166 ms)
+      √ no deja pasar mas de 5 intentos simultaneos (95 ms)
+      √ permite entrar de nuevo cuando vence la ventana de 15 minutos (212 ms)
+      √ un login exitoso reinicia el contador (344 ms)
+      √ registra los eventos sin contrasenas ni JWT (80 ms)
+    GET /api/auth/profile
+      √ devuelve el perfil sin datos sensibles con un token valido (55 ms)
+      √ responde 401 sin token (10 ms)
+      √ responde 401 con un token expirado (16 ms)
+      √ responde 401 con un token manipulado (50 ms)
+      √ responde 401 con emisor o audiencia incorrectos (17 ms)
+      √ responde 401 con un token firmado con otra llave (16 ms)
+      √ rechaza alg none y HS256 firmado con la llave publica (18 ms)
+      √ responde 401 si el usuario se desactiva con el token aun vigente (52 ms)
+    modelo user_roles
+      √ rechaza un par (user_id, role_id) duplicado (21 ms)
+      √ permite la relacion N:M con identificador propio y fecha de asignacion (23 ms)
+    infraestructura
+      √ expone /health fuera del prefijo /api (15 ms)
+      √ devuelve el request id y aplica las cabeceras de helmet (12 ms)
+      √ documenta en OpenAPI todos los endpoints (11 ms)
+PASS test/rbac.e2e-spec.ts
+  RBAC (e2e)
+    √ registra las decisiones sin el JWT (113 ms)
+    401 sin autenticacion valida
+      √ post /api/users sin token (24 ms)
+      √ get /api/users sin token (13 ms)
+      √ patch /api/users/6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d sin token (12 ms)
+      √ post /api/roles sin token (12 ms)
+      √ get /api/roles sin token (11 ms)
+      √ patch /api/roles/6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d sin token (12 ms)
+      √ post /api/user-roles sin token (11 ms)
+      √ delete /api/user-roles/6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d sin token (12 ms)
+      √ post /api/users con token invalido (12 ms)
+      √ get /api/users con token invalido (12 ms)
+      √ patch /api/users/6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d con token invalido (11 ms)
+      √ post /api/roles con token invalido (12 ms)
+      √ get /api/roles con token invalido (11 ms)
+      √ patch /api/roles/6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d con token invalido (12 ms)
+      √ post /api/user-roles con token invalido (11 ms)
+      √ delete /api/user-roles/6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d con token invalido (12 ms)
+    403 sin el rol requerido
+      √ T04: rol USER en post /api/users (95 ms)
+      √ T04: rol USER en get /api/users (61 ms)
+      √ T04: rol USER en patch /api/users/6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d (59 ms)
+      √ T04: rol USER en post /api/roles (64 ms)
+      √ T04: rol USER en get /api/roles (65 ms)
+      √ T04: rol USER en patch /api/roles/6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d (63 ms)
+      √ T04: rol USER en post /api/user-roles (62 ms)
+      √ T04: rol USER en delete /api/user-roles/6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d (59 ms)
+      √ rol ANALYST no accede a las rutas administrativas (58 ms)
+      √ un usuario sin roles recibe 403 (52 ms)
+      √ USER conserva el acceso a su perfil (55 ms)
+      √ no acepta permisos enviados por el cliente (56 ms)
+      √ ignora roles incluidos en un JWT con firma valida (22 ms)
+    ADMIN
+      √ accede a las rutas administrativas (67 ms)
+      √ un usuario con varios roles accede si uno de ellos lo permite (72 ms)
+    roles vigentes con el mismo JWT
+      √ T07: retirar el rol por la API deniega la siguiente peticion (128 ms)
+      √ asignar el rol da acceso con el mismo JWT (71 ms)
+      √ desactivar el rol deniega la siguiente peticion (69 ms)
+      √ un rol con soft delete no da acceso (58 ms)
+      √ desactivar al usuario deniega la siguiente peticion (66 ms)
+      √ un usuario con soft delete no conserva el acceso (61 ms)
+PASS test/roles.e2e-spec.ts
+  /api/roles (e2e)
+    √ no expone el borrado ni la consulta individual que genero Nest (39 ms)
+    POST
+      √ crea un rol activo (71 ms)
+      √ la descripcion es opcional (29 ms)
+      √ guarda el nombre en mayusculas (29 ms)
+      √ responde 400 con sin nombre (30 ms)
+      √ responde 400 con nombre de un caracter (26 ms)
+      √ responde 400 con nombre con espacios internos (26 ms)
+      √ responde 400 con nombre que empieza con digito (26 ms)
+      √ responde 400 con nombre de mas de 50 caracteres (25 ms)
+      √ responde 400 con descripcion de mas de 255 caracteres (27 ms)
+      √ responde 400 con campo ajeno al contrato (25 ms)
+      √ responde 409 si el rol ya existe, sin distinguir mayusculas (37 ms)
+    GET
+      √ pagina el listado (58 ms)
+      √ responde 400 con page=1e300 (24 ms)
+      √ responde 400 con page=1000001 (24 ms)
+      √ acepta la pagina maxima aunque este vacia (26 ms)
+      √ responde 400 con una paginacion invalida (24 ms)
+    PATCH /:id
+      √ actualiza los campos enviados (42 ms)
+      √ permite quitar la descripcion con null (38 ms)
+      √ desactiva sin borrar (40 ms)
+      √ responde 400 con null en vez de fallar en la base de datos (40 ms)
+      √ responde 409 si el nombre ya pertenece a otro rol (48 ms)
+      √ responde 404 si no existe y 400 si el identificador no es UUID (33 ms)
+PASS test/logout.e2e-spec.ts
+  POST /api/auth/logout (e2e)
+    √ responde 204 y el mismo JWT deja de funcionar (121 ms)
+    √ el token revocado tampoco entra a las rutas administrativas (76 ms)
+    √ guarda el jti y la expiracion, nunca el JWT (73 ms)
+    √ solo revoca el token usado, no otras sesiones del usuario (102 ms)
+    √ el usuario puede volver a iniciar sesion (95 ms)
+    √ responde 401 si se repite con el mismo token (64 ms)
+    √ logouts simultaneos no generan errores ni filas duplicadas (80 ms)
+    √ responde 401 sin token o con un token invalido (24 ms)
+    √ elimina las revocaciones de tokens ya vencidos (61 ms)
+    √ registra el logout y el rechazo sin el JWT (60 ms)
+PASS test/user-roles.e2e-spec.ts
+  /api/user-roles (e2e)
+    √ no expone las rutas que genero Nest (46 ms)
+    POST
+      √ crea la asignacion con identificador propio y fecha (78 ms)
+      √ T05: un usuario con dos roles y un rol en dos usuarios (75 ms)
+      √ T06: una asignacion repetida responde 409 sin crear otra fila (50 ms)
+      √ T06: asignaciones simultaneas crean una sola fila (66 ms)
+      √ responde 404 si el usuario o el rol no existen (46 ms)
+      √ responde 404 con un usuario con soft delete (34 ms)
+      √ responde 400 con identificadores que no son UUID (28 ms)
+      √ responde 400 con cuerpo vacio (26 ms)
+      √ responde 400 con campo ajeno al contrato (27 ms)
+    DELETE /:id
+      √ retira el rol sin afectar otras asignaciones (77 ms)
+      √ permite volver a asignar un rol retirado (67 ms)
+      √ responde 404 si no existe y 400 si el identificador no es UUID (34 ms)
+PASS test/internal-throttling.e2e-spec.ts
+  Limite de peticiones y endpoint interno (e2e)
+    √ STEGO no agota el limite aunque supere las peticiones permitidas por IP (51 ms)
+    √ el limite sigue activo en las rutas publicas (99 ms)
+PASS test/body-limit.e2e-spec.ts
+  Cuerpo de la peticion (e2e)
+    √ responde 413 con un JSON demasiado grande, sin autenticar (17 ms)
+    √ no registra el exceso como un error interno ni guarda el cuerpo (5 ms)
+    √ responde 400 con un JSON mal formado (17 ms)
+    √ sigue aceptando un cuerpo de tamano normal (40 ms)
+Test Suites: 9 passed, 9 total
+Tests:       187 passed, 187 total
+Snapshots:   0 total
+Time:        31.771 s, estimated 32 s
+Ran all test suites.

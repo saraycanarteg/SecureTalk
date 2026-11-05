@@ -13,6 +13,8 @@ coverage/
 
 # Logs y sistema
 *.log
+# Bitacoras depuradas que se entregan como evidencia
+!docs/evidencias/*.log
 .DS_Store
 
 # Muestras grandes: las genera scripts/generate-stego-samples.mjs

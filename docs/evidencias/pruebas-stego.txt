@@ -1,0 +1,268 @@
+## Unitarias
+> stego-service@0.0.1 test
+> node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose --reporters=default
+PASS src/steganography/detector/lsb-plaintext.spec.ts
+  longestReadableRun
+    √ cuenta los caracteres legibles seguidos (9 ms)
+    √ corta la racha en un byte que no es texto (1 ms)
+    √ cuenta una letra con tilde como un solo caracter (1 ms)
+    √ ignora una racha con muy pocos simbolos distintos (1 ms)
+    √ no acepta un byte de continuacion suelto (1 ms)
+    √ no acepta secuencias UTF-8 que no son letras del espanol
+    √ ignora una racha con demasiados simbolos, como la que aparece al azar (1 ms)
+  findPlaintextRun
+    √ encuentra texto insertado en orden en los canales de color (10 ms)
+    √ encuentra texto con el bit menos significativo primero (4 ms)
+    √ encuentra texto despues de una cabecera binaria (3 ms)
+    √ encuentra texto en un solo canal (3 ms)
+    √ en un BMP encuentra texto en la primera fila visible, en orden RGB (6 ms)
+    √ en un BMP encuentra texto en el orden de los bytes del archivo (5 ms)
+    √ no confunde un canal alfa constante con texto (10 ms)
+    √ una imagen sin mensaje no alcanza el umbral (3 ms)
+PASS src/steganography/detector/chi-square.spec.ts
+  chiSquareSurvival
+    √ chi2=3.841459 con 1 grados de libertad da 0.05 (9 ms)
+    √ chi2=6.634897 con 1 grados de libertad da 0.01 (1 ms)
+    √ chi2=18.307 con 10 grados de libertad da 0.05 (1 ms)
+    √ chi2=2.558 con 10 grados de libertad da 0.99 (1 ms)
+    √ chi2=124.342 con 100 grados de libertad da 0.05 (1 ms)
+    √ chi2=77.929 con 100 grados de libertad da 0.95 (1 ms)
+    √ devuelve 1 con un estadistico nulo (1 ms)
+    √ tiende a 0 con un estadistico enorme, sin devolver NaN
+    √ disminuye a medida que crece el estadistico (3 ms)
+PASS src/steganography/detector/sample-pairs.spec.ts
+  analisis de pares de muestras
+    √ clasifica cada par segun el orden y la paridad del segundo valor (9 ms)
+    √ marca los pares del mismo grupo y no clasifica los valores iguales (1 ms)
+    √ cubre todos los pares posibles (1 ms)
+    √ da una carga nula cuando X e Y son iguales (1 ms)
+    √ resuelve la ecuacion cuadratica con la raiz menor (1 ms)
+    √ se mantiene entre 0 y 1
+    √ no divide entre cero sin pares del mismo grupo (1 ms)
+PASS src/config/env.schema.spec.ts
+  validateEnv
+    √ usa los valores por defecto de autorizacion (19 ms)
+    √ se niega a arrancar con AUTHZ_MODE=mock en produccion (34 ms)
+    √ en produccion exige HTTPS hacia AUTH (3 ms)
+    √ permite AUTHZ_MODE=mock en desarrollo (1 ms)
+    √ exige una carpeta de cuarentena distinta de la de subida (4 ms)
+    √ no muestra valores en el mensaje de error (4 ms)
+PASS src/steganography/image/image-decoder.spec.ts
+  detectImageFormat
+    √ identifica por la firma real del archivo (12 ms)
+  decodificacion de PNG
+    √ devuelve los pixeles RGB y sus canales de color (10 ms)
+    √ excluye el canal alfa de los canales de color (4 ms)
+    √ reconstruye las filas con el filtro Sub (2 ms)
+    √ reconstruye las filas con el filtro Up (2 ms)
+    √ reconstruye las filas con el filtro Average (2 ms)
+    √ reconstruye las filas con el filtro Paeth (1 ms)
+    √ marca como no analizable un PNG integro con paleta (1 ms)
+    √ marca como no analizable un PNG integro de 16 bits (3 ms)
+    √ marca como no analizable un PNG integro de 1 bit (2 ms)
+    √ valida el tamano de un PNG entrelazado y lo marca como no analizable (3 ms)
+    √ rechaza un archivo truncado en cualquier punto (2 ms)
+    √ rechaza un CRC incorrecto (1 ms)
+    √ rechaza datos despues de IEND (1 ms)
+    √ rechaza un PNG que no empieza por IHDR, sin IDAT o sin IEND (1 ms)
+    √ rechaza una cabecera con valores invalidos (2 ms)
+    √ rechaza un filtro desconocido (1 ms)
+    √ rechaza datos que no son zlib o que no coinciden con las dimensiones (5 ms)
+    √ no descomprime una imagen que declara mas pixeles que el limite
+    √ detiene la descompresion cuando los datos superan lo declarado (381 ms)
+  decodificacion de BMP
+    √ devuelve los pixeles sin relleno y en el orden del archivo (1 ms)
+    √ admite altura negativa (filas de arriba hacia abajo) y 32 bits (1 ms)
+    √ marca como no analizable un BMP de paleta (1 ms)
+    √ marca como no analizable un BMP con BITFIELDS
+    √ marca como no analizable un BMP con RLE (1 ms)
+    √ rechaza un BMP truncado
+    √ admite relleno final pero rechaza datos despues de los pixeles (1 ms)
+    √ rechaza una cabecera con valores invalidos (1 ms)
+    √ aplica el limite de pixeles antes de procesar
+    √ aplica el limite con la altura negativa mas extrema (1 ms)
+PASS src/common/middleware/request-id/request-id.middleware.spec.ts
+  RequestIdMiddleware
+    √ conserva un identificador valido (8 ms)
+    √ genera uno nuevo si falta (2 ms)
+    √ descarta un valor que podria inyectar lineas en los logs (1 ms)
+PASS src/common/filters/all-exceptions/all-exceptions.filter.spec.ts
+  AllExceptionsFilter
+    √ no expone detalles de un error inesperado (25 ms)
+    √ conserva el mensaje de una excepcion HTTP de cliente (2 ms)
+PASS src/steganography/validation/image-file.validator.spec.ts
+  ImageFileValidator
+    √ no incluye datos del cliente en el motivo del rechazo (1 ms)
+    √ propaga un error de lectura para que no se confunda con un archivo corrupto
+    archivos validos
+      √ acepta PNG y BMP con extension, tipo y firma coherentes (16 ms)
+      √ no distingue mayusculas en la extension ni en el tipo (3 ms)
+      √ acepta una variante integra aunque la tecnica no pueda analizarla (3 ms)
+    T10: formatos no admitidos (415)
+      √ rechaza otra extension (1 ms)
+      √ rechaza doble extension
+      √ rechaza sin extension (1 ms)
+      √ rechaza terminado en punto (1 ms)
+      √ rechaza otro tipo de contenido (1 ms)
+      √ rechaza tipo de otro formato (1 ms)
+      √ rechaza tipo vacio
+      √ rechaza un contenido sin firma de imagen renombrado a .png (2 ms)
+      √ rechaza un BMP renombrado a .png y un PNG renombrado a .bmp (3 ms)
+    T10: archivos corruptos (400)
+      √ rechaza un PNG vacio (1 ms)
+      √ rechaza un PNG truncado (2 ms)
+      √ rechaza un PNG con CRC incorrecto (2 ms)
+      √ rechaza un PNG con datos despues de IEND (3 ms)
+      √ rechaza un PNG con datos que no son zlib (3 ms)
+      √ rechaza un BMP truncado (2 ms)
+    T10: limites excedidos (413)
+      √ rechaza por el tamaño sin leer el archivo (1 ms)
+      √ rechaza una bomba de descompresion por sus dimensiones (2 ms)
+PASS src/steganography/quarantine/quarantine.store.spec.ts
+  QuarantineStore
+    √ crea la carpeta al arrancar (13 ms)
+    √ mueve el archivo conservando su contenido y su nombre (11 ms)
+    √ falla si el archivo no existe (4 ms)
+    ○ skipped restringe la carpeta al usuario del servicio
+    ○ skipped deja el archivo en solo lectura y sin ejecucion
+PASS src/authz/authz.client.spec.ts
+  AuthzClient en modo mock
+    √ avisa en el log al arrancar (6 ms)
+    √ permite la operacion sin consultar a AUTH (1 ms)
+PASS src/steganography/detector/lsb.detector.spec.ts
+  LsbDetector
+    muestras originales
+      √ original.png no presenta indicios (48 ms)
+      √ original.bmp no presenta indicios (30 ms)
+    muestras con mensaje oculto
+      √ lsb-100.png resulta sospechosa y estima la carga real (36 ms)
+      √ lsb-100.bmp resulta sospechosa y estima la carga real (20 ms)
+      √ lsb-25.png resulta sospechosa y estima la carga real (18 ms)
+      √ lsb-texto-plano-25.png resulta sospechosa y estima la carga real (19 ms)
+      √ lsb-disperso-10.png resulta sospechosa y estima la carga real (18 ms)
+      √ detecta un mensaje del 2 % por las porciones iniciales (18 ms)
+      √ detecta un mensaje corto sin cifrar y no devuelve su contenido (22 ms)
+      √ la insercion completa tambien la confirma chi-cuadrado (18 ms)
+      √ la muestra guarda un mensaje real y solo cambia el bit menos significativo (23 ms)
+      √ detecta una insercion en un solo canal (60 ms)
+      √ en un BMP detecta un mensaje en la primera fila visible, al final del archivo (25 ms)
+      √ limitacion conocida: una carga dispersa del 3 % no se detecta (17 ms)
+    umbral segun el tamano de la imagen
+      √ exige mas evidencia con pocos pixeles que con muchos (25 ms)
+      √ informa que porcion estuvo mas cerca de su propio umbral (22 ms)
+    limitaciones y casos limite
+      √ un degradado perfecto no se clasifica como sospechoso (10 ms)
+      √ una imagen de un solo color no alcanza para concluir (4 ms)
+      √ una imagen con pocos pixeles no alcanza para concluir (6 ms)
+      √ una imagen con todos sus valores pares no se confunde con una insercion (10 ms)
+      √ una variante integra no analizable no es concluyente y explica el motivo (3 ms)
+      √ propaga el error si el archivo no se puede decodificar (16 ms)
+    indicadores
+      √ sigue el formato del Anexo C y calcula las metricas por canal (18 ms)
+      √ se puede guardar como JSON sin perder valores (6 ms)
+  chiSquareOfPairs
+    √ calcula el estadistico de Westfeld-Pfitzmann sobre los pares (1 ms)
+    √ da un p-valor de 1 con pares perfectamente iguales
+    √ da un p-valor cercano a 0 con pares muy desiguales
+    √ ignora los pares con muy pocas muestras
+    √ no calcula nada con menos de dos pares validos (1 ms)
+PASS src/health/health.controller.spec.ts
+  HealthController
+    √ responde ok cuando la base de datos contesta (5 ms)
+    √ responde 503 sin detalles cuando la base de datos falla (1 ms)
+Test Suites: 12 passed, 12 total
+Tests:       2 skipped, 130 passed, 132 total
+Snapshots:   0 total
+Time:        3.194 s
+Ran all test suites.
+
+## De extremo a extremo
+> stego-service@0.0.1 test:e2e
+> node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand --verbose --reporters=default
+PASS test/stego-detection.e2e-spec.ts (9.281 s)
+  T09: analisis de muestras originales y con carga LSB (e2e)
+    √ original.png: sin indicios, sin accion y sin conservar el archivo (148 ms)
+    √ original.bmp: sin indicios, sin accion y sin conservar el archivo (70 ms)
+    √ lsb-100.png: sospechoso y en cuarentena (1158 ms)
+    √ lsb-100.bmp: sospechoso y en cuarentena (1823 ms)
+    √ lsb-25.png: sospechoso y en cuarentena (819 ms)
+    √ lsb-texto-plano-25.png: sospechoso y en cuarentena (812 ms)
+    √ lsb-disperso-10.png: sospechoso y en cuarentena (823 ms)
+    √ lsb-2.png: sospechoso y en cuarentena (787 ms)
+    √ lsb-texto-corto.png: detecta el mensaje corto sin devolverlo (53 ms)
+    √ limitacion documentada: una carga dispersa del 3 % no se detecta (45 ms)
+    √ el mismo contenido da metricas distintas con y sin carga, y se pueden consultar (94 ms)
+PASS test/stego.e2e-spec.ts
+  STEGO (e2e)
+    T03: autenticacion
+      √ responde 401 sin token (34 ms)
+      √ responde 401 con un token manipulado (14 ms)
+      √ responde 401 con un token vencido (12 ms)
+      √ responde 401 con emisor o audiencia incorrectos (12 ms)
+      √ rechaza alg none y HS256 firmado con la llave publica (15 ms)
+    autorizacion contra AUTH
+      √ envia el contrato del Anexo B con la clave de servicio (34 ms)
+      √ T04: responde 403 con allowed=false sin recibir el archivo (13 ms)
+      √ T08: responde 503 con AUTH caido, sin guardar archivo ni registro (19 ms)
+      √ T08: responde 503 con timeout, sin guardar archivo ni registro (330 ms)
+      √ falla de forma segura ante error 500 (15 ms)
+      √ falla de forma segura ante error 401 de AUTH (20 ms)
+      √ falla de forma segura ante exito distinto de 200 (14 ms)
+      √ falla de forma segura ante redireccion (11 ms)
+      √ falla de forma segura ante cuerpo que no es JSON (11 ms)
+      √ falla de forma segura ante sin allowed (12 ms)
+      √ falla de forma segura ante sin reason (11 ms)
+      √ falla de forma segura ante allowed como texto (12 ms)
+      √ falla de forma segura ante allowed como numero (12 ms)
+      √ falla de forma segura ante otro usuario (11 ms)
+      √ falla de forma segura ante otra accion (12 ms)
+      √ registra cada decision sin JWT completos ni claves (28 ms)
+    POST /api/steganography/analyze
+      √ guarda con nombre aleatorio, registra y responde con el formato del Anexo C (20 ms)
+      √ sin_indicios: aplica ninguna y borra el archivo (23 ms)
+      √ no_concluyente: aplica advertencia y borra el archivo (20 ms)
+      √ registra status=error si el detector falla y no filtra el detalle (19 ms)
+      √ responde 500 sin detalles y borra el archivo si falla la base de datos (14 ms)
+      √ responde 413 si supera 10 MB, sin archivo ni registro (41 ms)
+      √ acepta un archivo de exactamente 10 MB (97 ms)
+      √ responde 400 si falta el archivo (12 ms)
+      cuarentena
+        √ mueve el archivo sospechoso a la carpeta aislada sin exponer su ruta (22 ms)
+        √ no publica el archivo por HTTP (32 ms)
+        √ no conserva el archivo si no se puede aislar (17 ms)
+        √ quita el archivo de la cuarentena si no se pudo registrar (15 ms)
+    T10: archivos rechazados
+      √ otra extension: responde 415 sin analizar, sin guardar y sin registro (13 ms)
+      √ otro tipo de contenido: responde 415 sin analizar, sin guardar y sin registro (13 ms)
+      √ contenido sin firma de imagen: responde 415 sin analizar, sin guardar y sin registro (13 ms)
+      √ BMP renombrado a .png: responde 415 sin analizar, sin guardar y sin registro (14 ms)
+      √ archivo vacio: responde 400 sin analizar, sin guardar y sin registro (12 ms)
+      √ PNG truncado: responde 400 sin analizar, sin guardar y sin registro (14 ms)
+      √ PNG con CRC incorrecto: responde 400 sin analizar, sin guardar y sin registro (13 ms)
+      √ PNG con datos anexados: responde 400 sin analizar, sin guardar y sin registro (14 ms)
+      √ bomba de descompresion: responde 413 sin analizar, sin guardar y sin registro (14 ms)
+    T10: peticiones con otra forma y nombres maliciosos
+      √ rechaza dos archivos sin conservar ninguno (12 ms)
+      √ rechaza un archivo en otro campo sin conservarlo (12 ms)
+      √ rechaza campos adicionales, como un permiso enviado por el cliente (11 ms)
+      √ usa ../../../etc/evil.png solo como dato, nunca como ruta (16 ms)
+      √ usa ..\..\evil.png solo como dato, nunca como ruta (17 ms)
+    GET /api/steganography/results/:id
+      √ devuelve el analisis a su propietario y autoriza con la accion de lectura (24 ms)
+      √ T11: responde 403 al consultar un analisis ajeno (24 ms)
+      √ responde 404 si no existe (10 ms)
+      √ responde 400 con un identificador invalido (8 ms)
+      √ responde 403 si AUTH deniega, aunque el analisis sea propio (23 ms)
+      √ responde 503 sin devolver datos si AUTH no responde (327 ms)
+    T12: bitacora de auditoria
+      √ deja trazabilidad de accesos, analisis, rechazos, cuarentena y fallos de AUTH (102 ms)
+      √ no registra JWT, claves, contenido de archivos ni datos de la URL (56 ms)
+      √ no llena la bitacora con el healthcheck (12 ms)
+    infraestructura
+      √ expone /health fuera del prefijo /api y aplica helmet (18 ms)
+      √ documenta los endpoints en OpenAPI (10 ms)
+Test Suites: 2 passed, 2 total
+Tests:       69 passed, 69 total
+Snapshots:   0 total
+Time:        13.337 s
+Ran all test suites.

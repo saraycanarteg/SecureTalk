@@ -1,0 +1,63 @@
+
+== T01 AUTH y STEGO se inician y detienen por separado
+OK    STEGO detenido: AUTH sigue respondiendo
+OK    STEGO detenido: STEGO no responde
+OK    AUTH detenido: STEGO sigue respondiendo
+OK    AUTH detenido: AUTH no responde
+
+== T02 Login con contrasena valida e invalida
+OK    contrasena valida entrega un JWT -> HTTP 200
+OK    contrasena invalida se rechaza -> HTTP 401
+
+== T05 Dos roles a un usuario y un rol a dos usuarios
+OK    ana recibe ANALYST
+OK    ana recibe tambien USER (dos roles)
+OK    bruno recibe ANALYST (un rol, dos usuarios)
+OK    carla recibe USER
+OK    dario recibe ANALYST
+
+== T06 Repetir una asignacion
+OK    no se crea una asociacion duplicada -> HTTP 409
+
+== T03 STEGO sin JWT o con JWT manipulado
+OK    sin JWT -> HTTP 401
+OK    otro sub con la firma original -> HTTP 401
+NOTA  JWT vencido: lo cubre test/stego.e2e-spec.ts, porque aqui no se firma con la llave privada.
+
+== T04 Usuario con rol USER intenta analizar
+OK    denegado -> HTTP 403
+
+== T09 Imagen original y muestra con carga LSB
+OK    original.png sin indicios -> HTTP 201 status=sin_indicios action=ninguna technique=lsb_statistical_analysis
+OK    lsb-100.png sospechosa -> HTTP 201 status=sospechoso action=cuarentena technique=lsb_statistical_analysis
+      indicadores de lsb-100.png: {"method":"chi_square_westfeld_pfitzmann+sample_pair_analysis+lsb_plaintext","anomaly_score":0.999993,"threshold":0.95,"lower_threshold":0.05,"estimated_payload_rate":0.999235,"payload_rate_threshold":0.08,"max_prefix_payload_rate":0.986358,"prefix_payload_rate_threshold":0.15,"plaintext_run":7,"pla
+      limitaciones: "Resultado indicativo, no concluyente: un resultado sospechoso es un indicio, no una prueba. Solo se analiza el bit menos significativo de los canales de color en PNG y BMP sin perdida. Puede no detectar cargas muy pequenas y puede equivocarse en imagenes con patrones inusuales, como degradados digi
+
+== T07 Retirar un rol y reutilizar el mismo JWT
+OK    con ANALYST puede analizar -> HTTP 201
+OK    se retira el rol -> HTTP 204
+OK    el mismo JWT queda denegado -> HTTP 403
+
+== T10 Archivos invalidos, corruptos o demasiado grandes
+OK    ejecutable-renombrado.png -> HTTP 415, esperado 415
+OK    imagen.gif -> HTTP 415, esperado 415
+OK    crc-incorrecto.png -> HTTP 400, esperado 400
+OK    demasiado-grande.png -> HTTP 413, esperado 413
+
+== T11 Consultar un analisis ajeno
+OK    la propietaria lo consulta -> HTTP 200
+OK    otro ANALYST no accede -> HTTP 403
+
+== T08 AUTH inaccesible: STEGO no procesa
+OK    el analisis responde 503 -> HTTP 503
+OK    la consulta responde 503 -> HTTP 503
+OK    no quedo ningun archivo nuevo
+OK    al volver AUTH, STEGO opera de nuevo -> HTTP 201
+
+== T12 Bitacoras sin secretos
+OK    hay eventos de acceso, autorizacion y analisis
+OK    sin JWT completos
+OK    sin la contrasena de ADMIN ni la de usuarios
+OK    sin nombres de archivo de la prueba
+
+Resultado: todas las comprobaciones pasaron
