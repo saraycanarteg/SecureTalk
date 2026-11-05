@@ -12,6 +12,7 @@ const ALGORITHM = 'EdDSA';
 export interface TokenClaims {
   sub: string;
   jti: string;
+  exp: number;
 }
 
 @Injectable()
@@ -61,6 +62,6 @@ export class TokenService implements OnModuleInit {
       audience: this.config.get('JWT_AUDIENCE', { infer: true }),
       requiredClaims: ['sub', 'iat', 'exp', 'jti'],
     });
-    return { sub: payload.sub as string, jti: payload.jti as string };
+    return { sub: payload.sub as string, jti: payload.jti as string, exp: payload.exp as number };
   }
 }

@@ -49,7 +49,7 @@ npm run test:e2e
 |---|---|---|---|
 | POST | `/api/auth/login` | Público, con límite de intentos | Implementado |
 | GET | `/api/auth/profile` | Usuario autenticado | Implementado |
-| POST | `/api/auth/logout` | Sesión autenticada | Pendiente |
+| POST | `/api/auth/logout` | Sesión autenticada | Implementado |
 | POST, GET | `/api/users` | ADMIN | Implementado |
 | PATCH | `/api/users/:id` | ADMIN | Implementado |
 | POST, GET | `/api/roles` | ADMIN | Implementado |

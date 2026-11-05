@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } fro
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -52,5 +53,19 @@ export class AuthController {
   })
   profile(@Req() req: AuthenticatedRequest) {
     return this.authService.getProfile(req.user.sub);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Revoca el JWT usado en la peticion' })
+  @ApiNoContentResponse({ description: 'Token revocado' })
+  @ApiUnauthorizedResponse({
+    type: ErrorResponseDto,
+    description: 'Token ausente, invalido, vencido o ya revocado',
+  })
+  logout(@Req() req: AuthenticatedRequest) {
+    return this.authService.logout(req.user, { ip: req.ip, requestId: req.requestId });
   }
 }

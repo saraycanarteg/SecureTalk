@@ -16,7 +16,8 @@ import { User } from '../users/entities/user.entity';
 import { LoginResponseDto, ProfileResponseDto } from './dto/auth-responses.dto';
 import { LoginDto } from './dto/login.dto';
 import { hashIdentifier, LoginAttemptsService } from './login-attempts.service';
-import { TokenService } from './token.service';
+import { RevokedTokensService } from './revoked-tokens.service';
+import { TokenClaims, TokenService } from './token.service';
 
 export interface RequestContext {
   ip?: string;
@@ -33,6 +34,7 @@ export class AuthService implements OnModuleInit {
     private readonly users: Repository<User>,
     private readonly attempts: LoginAttemptsService,
     private readonly tokens: TokenService,
+    private readonly revokedTokens: RevokedTokensService,
   ) {}
 
   // Con un usuario inexistente se verifica contra este hash para que el tiempo
@@ -100,6 +102,13 @@ export class AuthService implements OnModuleInit {
       nombres: user.nombres,
       apellidos: user.apellidos,
     };
+  }
+
+  async logout(claims: TokenClaims, context: RequestContext): Promise<void> {
+    await this.revokedTokens.revoke(claims);
+    this.logger.log(
+      `logout userId=${claims.sub} jti=${claims.jti} ip=${context.ip} requestId=${context.requestId}`,
+    );
   }
 
   private logFailure(reason: string, subject: string, context: RequestContext) {
