@@ -1,7 +1,8 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# Sin scripts de instalacion: un paquete comprometido no puede ejecutar codigo al construir la imagen.
+RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build
 RUN npm prune --omit=dev

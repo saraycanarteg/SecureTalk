@@ -11,7 +11,7 @@ import { hashPassword } from './../src/common/security/password-hash';
 import { Role } from './../src/roles/entities/role.entity';
 import { UserRole } from './../src/user-roles/entities/user-role.entity';
 import { User } from './../src/users/entities/user.entity';
-import { createTestApp } from './test-app';
+import { createTestApp, createTestRole, createTestUser } from './test-app';
 
 const PASSWORD = 'Contrasena-De-Prueba-1';
 const SOME_ID = '6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d';
@@ -33,30 +33,10 @@ describe('RBAC (e2e)', () => {
   let app: NestExpressApplication;
   let dataSource: DataSource;
   let passwordHash: string;
-  let userCounter = 0;
 
   const server = () => request(app.getHttpServer());
-
-  const createUser = (username: string) => {
-    userCounter += 1;
-    const users = dataSource.getRepository(User);
-    return users.save(
-      users.create({
-        cedula: String(userCounter).padStart(10, '0'),
-        nombres: 'Nombre',
-        apellidos: 'Apellido',
-        fechaNacimiento: '1990-01-01',
-        username,
-        email: `${username}@example.com`,
-        passwordHash,
-      }),
-    );
-  };
-
-  const createRole = (rol: string) => {
-    const roles = dataSource.getRepository(Role);
-    return roles.save(roles.create({ rol }));
-  };
+  const createUser = (username: string) => createTestUser(dataSource, username, passwordHash);
+  const createRole = (rol: string) => createTestRole(dataSource, rol);
 
   const grant = (user: User, role: Role) =>
     dataSource.getRepository(UserRole).save({ userId: user.id, roleId: role.id });
