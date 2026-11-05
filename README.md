@@ -69,4 +69,8 @@ npm run test:e2e
 
 ## Matriz de riesgos
 
-La matriz de activos, amenazas, vulnerabilidades, riesgos y controles se está elaborando en una hoja de cálculo aparte.
+La matriz de activos, amenazas, vulnerabilidades, riesgos y controles está en [docs/riesgos.md](docs/riesgos.md).
+
+## Análisis esteganográfico
+
+El método, sus parámetros, resultados y limitaciones están en [docs/estegoanalisis.md](docs/estegoanalisis.md).
