@@ -5,16 +5,18 @@ import { DataSource } from 'typeorm';
 import { Role } from './../src/roles/entities/role.entity';
 import { UserRole } from './../src/user-roles/entities/user-role.entity';
 import { User } from './../src/users/entities/user.entity';
-import { createTestApp } from './test-app';
+import { createAdminToken, createTestApp } from './test-app';
 
 const UNKNOWN_ID = '6f0f6a34-5d10-4a51-9d61-0a6a4f1c2b3d';
 
 describe('/api/user-roles (e2e)', () => {
   let app: NestExpressApplication;
   let dataSource: DataSource;
+  let adminToken: string;
   let userCounter = 0;
 
-  const server = () => request(app.getHttpServer());
+  const server = () =>
+    request.agent(app.getHttpServer()).set('Authorization', `Bearer ${adminToken}`);
   const assign = (userId: string, roleId: string) =>
     server().post('/api/user-roles').send({ userId, roleId });
   const assignments = () => dataSource.getRepository(UserRole);
@@ -46,6 +48,7 @@ describe('/api/user-roles (e2e)', () => {
 
   beforeEach(async () => {
     await dataSource.query(`TRUNCATE "user_roles", "users", "roles" CASCADE`);
+    adminToken = await createAdminToken(app, dataSource);
   });
 
   afterAll(async () => {
@@ -70,16 +73,16 @@ describe('/api/user-roles (e2e)', () => {
     it('T05: un usuario con dos roles y un rol en dos usuarios', async () => {
       const ana = await createUser('ana');
       const luis = await createUser('luis');
-      const admin = await createRole('ADMIN');
+      const auditor = await createRole('AUDITOR');
       const analyst = await createRole('ANALYST');
 
-      await assign(ana.id, admin.id).expect(201);
+      await assign(ana.id, auditor.id).expect(201);
       await assign(ana.id, analyst.id).expect(201);
       await assign(luis.id, analyst.id).expect(201);
 
       await expect(assignments().countBy({ userId: ana.id })).resolves.toBe(2);
       await expect(assignments().countBy({ roleId: analyst.id })).resolves.toBe(2);
-      await expect(assignments().count()).resolves.toBe(3);
+      await expect(assignments().count()).resolves.toBe(4);
     });
 
     it('T06: una asignacion repetida responde 409 sin crear otra fila', async () => {
@@ -90,7 +93,7 @@ describe('/api/user-roles (e2e)', () => {
       const res = await assign(user.id, role.id).expect(409);
 
       expect(res.body.message).toBe('El usuario ya tiene ese rol');
-      await expect(assignments().count()).resolves.toBe(1);
+      await expect(assignments().count()).resolves.toBe(2);
     });
 
     it('T06: asignaciones simultaneas crean una sola fila', async () => {
@@ -104,7 +107,7 @@ describe('/api/user-roles (e2e)', () => {
 
       expect(statuses.filter((status) => status === 201)).toHaveLength(1);
       expect(statuses.filter((status) => status === 409)).toHaveLength(4);
-      await expect(assignments().count()).resolves.toBe(1);
+      await expect(assignments().count()).resolves.toBe(2);
     });
 
     it('responde 404 si el usuario o el rol no existen', async () => {
@@ -116,7 +119,7 @@ describe('/api/user-roles (e2e)', () => {
 
       expect(noUser.body.message).toBe('Usuario no encontrado');
       expect(noRole.body.message).toBe('Rol no encontrado');
-      await expect(assignments().count()).resolves.toBe(0);
+      await expect(assignments().count()).resolves.toBe(1);
     });
 
     it('responde 404 con un usuario con soft delete', async () => {
@@ -139,14 +142,14 @@ describe('/api/user-roles (e2e)', () => {
   describe('DELETE /:id', () => {
     it('retira el rol sin afectar otras asignaciones', async () => {
       const user = await createUser('ana');
-      const admin = await createRole('ADMIN');
+      const auditor = await createRole('AUDITOR');
       const analyst = await createRole('ANALYST');
-      const { body: kept } = await assign(user.id, admin.id).expect(201);
+      const { body: kept } = await assign(user.id, auditor.id).expect(201);
       const { body: removed } = await assign(user.id, analyst.id).expect(201);
 
       await server().delete(`/api/user-roles/${removed.id}`).expect(204);
 
-      const rows = await assignments().find();
+      const rows = await assignments().findBy({ userId: user.id });
       expect(rows.map((row) => row.id)).toEqual([kept.id]);
     });
 

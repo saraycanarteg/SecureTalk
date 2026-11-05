@@ -9,6 +9,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { AdminOnly } from '../auth/admin-only.decorator';
 import { ErrorResponseDto } from '../auth/dto/auth-responses.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto/pagination-query.dto';
 import { CreateRoleDto } from './dto/create-role.dto';
@@ -17,6 +18,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { RolesService } from './roles.service';
 
 @ApiTags('roles')
+@AdminOnly()
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}

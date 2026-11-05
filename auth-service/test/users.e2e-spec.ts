@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 
 import { verifyPassword } from './../src/common/security/password-hash';
 import { User } from './../src/users/entities/user.entity';
-import { createTestApp } from './test-app';
+import { createAdminToken, createTestApp } from './test-app';
 
 const validUser = {
   cedula: '1710034065',
@@ -26,9 +26,12 @@ const otherUser = {
 describe('/api/users (e2e)', () => {
   let app: NestExpressApplication;
   let dataSource: DataSource;
+  let adminToken: string;
 
   const server = () => request(app.getHttpServer());
-  const post = (body: object) => server().post('/api/users').send(body);
+  const admin = () =>
+    request.agent(app.getHttpServer()).set('Authorization', `Bearer ${adminToken}`);
+  const post = (body: object) => admin().post('/api/users').send(body);
   const login = (username: string, password: string) =>
     server().post('/api/auth/login').send({ username, password });
 
@@ -37,7 +40,8 @@ describe('/api/users (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await dataSource.query(`TRUNCATE "users", "login_attempts" CASCADE`);
+    await dataSource.query(`TRUNCATE "users", "roles", "login_attempts" CASCADE`);
+    adminToken = await createAdminToken(app, dataSource);
   });
 
   afterAll(async () => {
@@ -92,7 +96,7 @@ describe('/api/users (e2e)', () => {
     ])('responde 400 con %s', async (_motivo, change) => {
       await post({ ...validUser, ...change }).expect(400);
 
-      await expect(dataSource.getRepository(User).count()).resolves.toBe(0);
+      await expect(dataSource.getRepository(User).count()).resolves.toBe(1);
     });
 
     it.each([
@@ -105,7 +109,7 @@ describe('/api/users (e2e)', () => {
       const res = await post({ ...otherUser, ...change }).expect(409);
 
       expect(res.body.message).toBe(message);
-      await expect(dataSource.getRepository(User).count()).resolves.toBe(1);
+      await expect(dataSource.getRepository(User).count()).resolves.toBe(2);
     });
 
     it('trata el email sin distinguir mayusculas', async () => {
@@ -120,10 +124,10 @@ describe('/api/users (e2e)', () => {
       await post(validUser).expect(201);
       await post(otherUser).expect(201);
 
-      const first = await server().get('/api/users?page=1&limit=1').expect(200);
-      const second = await server().get('/api/users?page=2&limit=1').expect(200);
+      const first = await admin().get('/api/users?page=1&limit=1').expect(200);
+      const second = await admin().get('/api/users?page=2&limit=1').expect(200);
 
-      expect(first.body).toMatchObject({ page: 1, limit: 1, total: 2 });
+      expect(first.body).toMatchObject({ page: 1, limit: 1, total: 3 });
       expect(first.body.data).toHaveLength(1);
       expect(second.body.data).toHaveLength(1);
       expect(second.body.data[0].id).not.toBe(first.body.data[0].id);
@@ -131,18 +135,19 @@ describe('/api/users (e2e)', () => {
     });
 
     it('aplica valores por defecto', async () => {
-      const res = await server().get('/api/users').expect(200);
+      const res = await admin().get('/api/users').expect(200);
 
-      expect(res.body).toEqual({ data: [], page: 1, limit: 20, total: 0 });
+      expect(res.body).toMatchObject({ page: 1, limit: 20, total: 1 });
+      expect(res.body.data).toHaveLength(1);
     });
 
     it.each(['page=0', 'limit=0', 'limit=101', 'page=abc'])('responde 400 con %s', async (query) => {
-      await server().get(`/api/users?${query}`).expect(400);
+      await admin().get(`/api/users?${query}`).expect(400);
     });
   });
 
   describe('PATCH /:id', () => {
-    const patch = (id: string, body: object) => server().patch(`/api/users/${id}`).send(body);
+    const patch = (id: string, body: object) => admin().patch(`/api/users/${id}`).send(body);
 
     it('actualiza los campos enviados', async () => {
       const { body: user } = await post(validUser).expect(201);
@@ -211,7 +216,7 @@ describe('/api/users (e2e)', () => {
   it('no expone el borrado ni la consulta individual que genero Nest', async () => {
     const { body: user } = await post(validUser).expect(201);
 
-    await server().delete(`/api/users/${user.id}`).expect(404);
-    await server().get(`/api/users/${user.id}`).expect(404);
+    await admin().delete(`/api/users/${user.id}`).expect(404);
+    await admin().get(`/api/users/${user.id}`).expect(404);
   });
 });

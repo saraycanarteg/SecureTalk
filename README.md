@@ -50,12 +50,12 @@ npm run test:e2e
 | POST | `/api/auth/login` | Público, con límite de intentos | Implementado |
 | GET | `/api/auth/profile` | Usuario autenticado | Implementado |
 | POST | `/api/auth/logout` | Sesión autenticada | Pendiente |
-| POST, GET | `/api/users` | ADMIN | Implementado, falta aplicar RBAC |
-| PATCH | `/api/users/:id` | ADMIN | Implementado, falta aplicar RBAC |
-| POST, GET | `/api/roles` | ADMIN | Implementado, falta aplicar RBAC |
-| PATCH | `/api/roles/:id` | ADMIN | Implementado, falta aplicar RBAC |
-| POST | `/api/user-roles` | ADMIN | Implementado, falta aplicar RBAC |
-| DELETE | `/api/user-roles/:id` | ADMIN | Implementado, falta aplicar RBAC |
+| POST, GET | `/api/users` | ADMIN | Implementado |
+| PATCH | `/api/users/:id` | ADMIN | Implementado |
+| POST, GET | `/api/roles` | ADMIN | Implementado |
+| PATCH | `/api/roles/:id` | ADMIN | Implementado |
+| POST | `/api/user-roles` | ADMIN | Implementado |
+| DELETE | `/api/user-roles/:id` | ADMIN | Implementado |
 | POST | `/internal/authorization/check` | Solo STEGO, con `X-Service-Key` | Pendiente |
 
 ## Matriz de riesgos

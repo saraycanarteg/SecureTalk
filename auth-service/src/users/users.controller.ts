@@ -9,6 +9,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { AdminOnly } from '../auth/admin-only.decorator';
 import { ErrorResponseDto } from '../auth/dto/auth-responses.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto/pagination-query.dto';
 import { CedulaPipe } from '../common/pipes/cedula/cedula.pipe';
@@ -18,6 +19,7 @@ import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('users')
+@AdminOnly()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

@@ -18,12 +18,14 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { AdminOnly } from '../auth/admin-only.decorator';
 import { ErrorResponseDto } from '../auth/dto/auth-responses.dto';
 import { CreateUserRoleDto } from './dto/create-user-role.dto';
 import { UserRoleResponseDto } from './dto/user-role-response.dto';
 import { UserRolesService } from './user-roles.service';
 
 @ApiTags('user-roles')
+@AdminOnly()
 @Controller('user-roles')
 export class UserRolesController {
   constructor(private readonly userRolesService: UserRolesService) {}

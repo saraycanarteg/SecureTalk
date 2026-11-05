@@ -3,13 +3,15 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 
 import { Role } from './../src/roles/entities/role.entity';
-import { createTestApp } from './test-app';
+import { createAdminToken, createTestApp } from './test-app';
 
 describe('/api/roles (e2e)', () => {
   let app: NestExpressApplication;
   let dataSource: DataSource;
+  let adminToken: string;
 
-  const server = () => request(app.getHttpServer());
+  const server = () =>
+    request.agent(app.getHttpServer()).set('Authorization', `Bearer ${adminToken}`);
   const post = (body: object) => server().post('/api/roles').send(body);
   const patch = (id: string, body: object) => server().patch(`/api/roles/${id}`).send(body);
 
@@ -18,7 +20,8 @@ describe('/api/roles (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await dataSource.query(`TRUNCATE "roles" CASCADE`);
+    await dataSource.query(`TRUNCATE "users", "roles" CASCADE`);
+    adminToken = await createAdminToken(app, dataSource);
   });
 
   afterAll(async () => {
@@ -60,7 +63,7 @@ describe('/api/roles (e2e)', () => {
     ])('responde 400 con %s', async (_motivo, body) => {
       await post(body).expect(400);
 
-      await expect(dataSource.getRepository(Role).count()).resolves.toBe(0);
+      await expect(dataSource.getRepository(Role).count()).resolves.toBe(1);
     });
 
     it('responde 409 si el rol ya existe, sin distinguir mayusculas', async () => {
@@ -69,7 +72,7 @@ describe('/api/roles (e2e)', () => {
       const res = await post({ rol: 'auditor' }).expect(409);
 
       expect(res.body.message).toBe('El rol ya existe');
-      await expect(dataSource.getRepository(Role).count()).resolves.toBe(1);
+      await expect(dataSource.getRepository(Role).count()).resolves.toBe(2);
     });
   });
 
@@ -78,10 +81,10 @@ describe('/api/roles (e2e)', () => {
       await post({ rol: 'AUDITOR' }).expect(201);
       await post({ rol: 'SOPORTE' }).expect(201);
 
-      const first = await server().get('/api/roles?page=1&limit=1').expect(200);
-      const second = await server().get('/api/roles?page=2&limit=1').expect(200);
+      const first = await server().get('/api/roles?page=2&limit=1').expect(200);
+      const second = await server().get('/api/roles?page=3&limit=1').expect(200);
 
-      expect(first.body).toMatchObject({ page: 1, limit: 1, total: 2 });
+      expect(first.body).toMatchObject({ page: 2, limit: 1, total: 3 });
       expect(first.body.data[0].rol).toBe('AUDITOR');
       expect(second.body.data[0].rol).toBe('SOPORTE');
     });
