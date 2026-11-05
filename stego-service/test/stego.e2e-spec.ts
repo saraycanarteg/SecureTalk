@@ -13,7 +13,6 @@ import { DataSource } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/app.setup';
 import { DETECTOR } from './../src/steganography/detector/detector.interface';
-import { PlaceholderDetector } from './../src/steganography/detector/placeholder.detector';
 import { Analysis } from './../src/steganography/entities/analysis.entity';
 import { MAX_IMAGE_PIXELS } from './../src/steganography/image/decoded-image';
 import {
@@ -32,6 +31,12 @@ const FAKE_AUTH_PORT = 45871;
 const CONTENT = buildRgbPng(4, 4);
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const CHECK_PATH = '/internal/authorization/check';
+const DETECTOR_RESULT = {
+  technique: 'prueba',
+  status: 'no_concluyente',
+  indicators: {},
+  limitations: 'Resultado de prueba',
+};
 
 interface CheckCall {
   method?: string;
@@ -163,9 +168,8 @@ describe('STEGO (e2e)', () => {
 
     checks = [];
     handler = allow;
-    const placeholder = new PlaceholderDetector();
     detector.analyze.mockReset();
-    detector.analyze.mockImplementation((path: string) => placeholder.analyze(path));
+    detector.analyze.mockResolvedValue(DETECTOR_RESULT);
   });
 
   afterEach(() => {
@@ -352,7 +356,7 @@ describe('STEGO (e2e)', () => {
         pathSeen = path;
         expect(existsSync(path)).toBe(true);
         expect(readFileSync(path)).toEqual(CONTENT);
-        return new PlaceholderDetector().analyze(path);
+        return DETECTOR_RESULT;
       });
 
       const res = await analyze(await signToken(userId)).expect(201);
@@ -364,11 +368,11 @@ describe('STEGO (e2e)', () => {
         user_id: userId,
         filename: 'muestra.png',
         sha256: createHash('sha256').update(CONTENT).digest('hex'),
-        technique: 'pendiente_implementacion',
+        technique: 'prueba',
         status: 'no_concluyente',
         indicators: {},
         action: 'advertencia',
-        limitations: expect.any(String),
+        limitations: 'Resultado de prueba',
       });
     });
 

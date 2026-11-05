@@ -16,7 +16,7 @@ export class AnalysisResponseDto {
   @ApiProperty({ description: 'SHA-256 del archivo en hexadecimal' })
   sha256!: string;
 
-  @ApiProperty({ example: 'pendiente_implementacion' })
+  @ApiProperty({ example: 'lsb_statistical_analysis' })
   technique!: string;
 
   @ApiProperty({ enum: ['sin_indicios', 'sospechoso', 'no_concluyente', 'error'] })

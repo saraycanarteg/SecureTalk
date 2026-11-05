@@ -10,7 +10,7 @@ import { AuthModule } from '../auth/auth.module';
 import { AuthzModule } from '../authz/authz.module';
 import type { Env } from '../config/env.schema.js';
 import { DETECTOR } from './detector/detector.interface';
-import { PlaceholderDetector } from './detector/placeholder.detector';
+import { LsbChiSquareDetector } from './detector/lsb-chi-square.detector';
 import { Analysis } from './entities/analysis.entity';
 import { SteganographyController } from './steganography.controller';
 import { SteganographyService } from './steganography.service';
@@ -41,7 +41,7 @@ import { ImageFileValidator } from './validation/image-file.validator';
   controllers: [SteganographyController],
   providers: [
     SteganographyService,
-    { provide: DETECTOR, useClass: PlaceholderDetector },
+    { provide: DETECTOR, useClass: LsbChiSquareDetector },
     { provide: FILE_VALIDATOR, useClass: ImageFileValidator },
   ],
 })
