@@ -119,34 +119,44 @@ function extractSequential(stego, byteLength) {
   return message;
 }
 
-function encodePng(pixels) {
-  const chunk = (type, data) => {
-    const body = Buffer.concat([Buffer.from(type, 'latin1'), data]);
-    const framed = Buffer.alloc(body.length + 8);
-    framed.writeUInt32BE(data.length, 0);
-    body.copy(framed, 4);
-    framed.writeUInt32BE(crc32(body), body.length + 4);
-    return framed;
-  };
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+function pngChunk(type, data = Buffer.alloc(0)) {
+  const body = Buffer.concat([Buffer.from(type, 'latin1'), data]);
+  const framed = Buffer.alloc(body.length + 8);
+  framed.writeUInt32BE(data.length, 0);
+  body.copy(framed, 4);
+  framed.writeUInt32BE(crc32(body), body.length + 4);
+  return framed;
+}
+
+function pngHeader(width, height, { bitDepth = 8, colorType = 2, interlace = 0 } = {}) {
   const header = Buffer.alloc(13);
-  header.writeUInt32BE(WIDTH, 0);
-  header.writeUInt32BE(HEIGHT, 4);
-  header[8] = 8;
-  header[9] = 2;
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = bitDepth;
+  header[9] = colorType;
+  header[12] = interlace;
+  return pngChunk('IHDR', header);
+}
 
+function buildPng(width, height, scanlines, options = {}) {
+  return Buffer.concat([
+    PNG_SIGNATURE,
+    pngHeader(width, height, options),
+    ...(options.extraChunks ?? []),
+    pngChunk('IDAT', deflateSync(scanlines, { level: 9 })),
+    pngChunk('IEND'),
+  ]);
+}
+
+function encodePng(pixels) {
   const stride = WIDTH * CHANNELS;
   const scanlines = Buffer.alloc(HEIGHT * (stride + 1));
   for (let row = 0; row < HEIGHT; row++) {
     pixels.copy(scanlines, row * (stride + 1) + 1, row * stride, (row + 1) * stride);
   }
-
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', header),
-    chunk('IDAT', deflateSync(scanlines, { level: 9 })),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
+  return buildPng(WIDTH, HEIGHT, scanlines);
 }
 
 // Un BMP guarda las filas de abajo hacia arriba y cada pixel en orden BGR.
@@ -164,24 +174,28 @@ function toBmpStorageOrder(pixels) {
   return stored;
 }
 
-// WIDTH * CHANNELS es multiplo de 4, asi que las filas no necesitan relleno.
-function encodeBmp(stored) {
+function buildBmp(width, height, stored) {
   const header = Buffer.alloc(54);
   header.write('BM', 0, 'latin1');
   header.writeUInt32LE(header.length + stored.length, 2);
   header.writeUInt32LE(header.length, 10);
   header.writeUInt32LE(40, 14);
-  header.writeInt32LE(WIDTH, 18);
-  header.writeInt32LE(HEIGHT, 22);
+  header.writeInt32LE(width, 18);
+  header.writeInt32LE(height, 22);
   header.writeUInt16LE(1, 26);
   header.writeUInt16LE(24, 28);
   header.writeUInt32LE(stored.length, 34);
   return Buffer.concat([header, stored]);
 }
 
+// WIDTH * CHANNELS es multiplo de 4, asi que las filas no necesitan relleno.
+const encodeBmp = (stored) => buildBmp(WIDTH, HEIGHT, stored);
+
 function write(name, content) {
-  writeFileSync(join(samplesDir, name), content);
-  console.log(`${name.padEnd(30)} ${content.length} bytes`);
+  const path = join(samplesDir, name);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, content);
+  console.log(`${name.padEnd(40)} ${content.length} bytes`);
 }
 
 const capacity = (WIDTH * HEIGHT * CHANNELS) / 8;
@@ -195,7 +209,6 @@ if (!extractSequential(stegoFull, capacity).equals(fullMessage)) {
   throw new Error('El mensaje insertado no se pudo recuperar');
 }
 
-mkdirSync(samplesDir, { recursive: true });
 write('original.png', encodePng(original));
 write('original.bmp', encodeBmp(originalBmp));
 write('lsb-100.png', encodePng(stegoFull));
@@ -203,3 +216,78 @@ write('lsb-100.bmp', encodeBmp(embedSequential(originalBmp, fullMessage)));
 write('lsb-25.png', encodePng(embedSequential(original, fullMessage.subarray(0, capacity / 4))));
 write('lsb-texto-plano-25.png', encodePng(embedSequential(original, plainMessage(capacity / 4))));
 write('lsb-disperso-10.png', encodePng(embedScattered(original, fullMessage.subarray(0, Math.floor(capacity / 10)), 7)));
+
+// Filas sin filtrar de un patron RGB sencillo.
+function patternScanlines(width, height) {
+  const stride = width * CHANNELS;
+  const scanlines = Buffer.alloc(height * (stride + 1));
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < stride; col++) {
+      scanlines[row * (stride + 1) + 1 + col] = (row * 7 + col * 3) & 0xff;
+    }
+  }
+  return scanlines;
+}
+
+function solidScanlines(width, height, value) {
+  const stride = width * CHANNELS;
+  const scanlines = Buffer.alloc(height * (stride + 1), value);
+  for (let row = 0; row < height; row++) {
+    scanlines[row * (stride + 1)] = 0;
+  }
+  return scanlines;
+}
+
+// Cada columna repite un valor: todos los valores aparecen el mismo numero de veces.
+function gradientScanlines(size) {
+  const stride = size * CHANNELS;
+  const scanlines = Buffer.alloc(size * (stride + 1));
+  for (let row = 0; row < size; row++) {
+    const start = row * (stride + 1) + 1;
+    for (let col = 0; col < size; col++) {
+      scanlines.fill(col, start + col * CHANNELS, start + (col + 1) * CHANNELS);
+    }
+  }
+  return scanlines;
+}
+
+const tinyPng = buildPng(16, 16, patternScanlines(16, 16));
+const tinyBmp = buildBmp(16, 16, Buffer.alloc(16 * 16 * CHANNELS, 0x55));
+const garbledCrc = Buffer.from(tinyPng);
+garbledCrc[garbledCrc.length - 20] ^= 0xff;
+const wrongFilter = patternScanlines(16, 16);
+wrongFilter[0] = 9;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+// Archivos que el servicio debe rechazar.
+write('invalidos/html-renombrado.png', Buffer.from('<html><script>alert(1)</script></html>'));
+write('invalidos/ejecutable-renombrado.png', Buffer.concat([Buffer.from('MZ'), Buffer.alloc(62)]));
+write('invalidos/archivo.exe', tinyPng);
+write('invalidos/doble-extension.png.exe', tinyPng);
+write('invalidos/imagen.svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>'));
+write('invalidos/imagen.gif', Buffer.concat([Buffer.from('GIF89a'), Buffer.alloc(32)]));
+write('invalidos/bmp-renombrado.png', tinyBmp);
+write('invalidos/png-renombrado.bmp', tinyPng);
+write('invalidos/vacio.png', Buffer.alloc(0));
+write('invalidos/truncado.png', tinyPng.subarray(0, tinyPng.length - 20));
+write('invalidos/truncado.bmp', tinyBmp.subarray(0, tinyBmp.length - 10));
+write('invalidos/crc-incorrecto.png', garbledCrc);
+write('invalidos/poliglota-zip.png', Buffer.concat([tinyPng, Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(26)]));
+write('invalidos/poliglota-html.bmp', Buffer.concat([tinyBmp, Buffer.from('<script>alert(1)</script>')]));
+write('invalidos/filtro-invalido.png', buildPng(16, 16, wrongFilter));
+write('invalidos/zlib-danado.png', Buffer.concat([PNG_SIGNATURE, pngHeader(16, 16), pngChunk('IDAT', Buffer.from('no-es-zlib')), pngChunk('IEND')]));
+write('invalidos/dimensiones-falsas.png', buildPng(1000, 1000, patternScanlines(16, 16)));
+write('invalidos/bomba-dimensiones.png', Buffer.concat([PNG_SIGNATURE, pngHeader(30000, 30000), pngChunk('IDAT', deflateSync(Buffer.alloc(16))), pngChunk('IEND')]));
+write('invalidos/bomba-descompresion.png', buildPng(1, 1, Buffer.alloc(64 * 1024 * 1024)));
+write('invalidos/demasiado-grande.png', Buffer.alloc(MAX_FILE_SIZE + 1));
+
+// Archivos validos que la tecnica no puede analizar o que muestran sus limites.
+write('limites/paleta.png', buildPng(2, 2, Buffer.alloc(6), { colorType: 3, extraChunks: [pngChunk('PLTE', Buffer.alloc(6, 0x40))] }));
+write('limites/entrelazado.png', buildPng(2, 2, Buffer.alloc(15), { interlace: 1 }));
+write('limites/16-bits.png', buildPng(2, 2, Buffer.alloc(26), { bitDepth: 16 }));
+write('limites/pequena.png', buildPng(32, 32, patternScanlines(32, 32)));
+write('limites/un-color.png', buildPng(100, 100, solidScanlines(100, 100, 120)));
+write('limites/degradado.png', buildPng(256, 256, gradientScanlines(256)));
+write('limites/maximo-16mp.png', buildPng(4000, 4000, Buffer.alloc(4000 * (4000 * 4 + 1)), { colorType: 6 }));
+const paddingLength = MAX_FILE_SIZE - tinyPng.length - 12;
+write('limites/exactamente-10mb.png', Buffer.concat([tinyPng.subarray(0, tinyPng.length - 12), pngChunk('tEXt', Buffer.alloc(paddingLength, 0x20)), tinyPng.subarray(tinyPng.length - 12)]));

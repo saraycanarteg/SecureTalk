@@ -15,6 +15,10 @@ coverage/
 *.log
 .DS_Store
 
+# Muestras grandes: las genera scripts/generate-stego-samples.mjs
+samples/invalidos/demasiado-grande.png
+samples/limites/exactamente-10mb.png
+
 # Archivos recibidos por STEGO
 uploads/
 stego-service/quarantine/
