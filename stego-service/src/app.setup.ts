@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
+import { AccessLogMiddleware } from './common/middleware/access-log/access-log.middleware.js';
 import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware.js';
 import type { Env } from './config/env.schema.js';
 import { SteganographyModule } from './steganography/steganography.module';
@@ -16,6 +17,8 @@ export function configureApp(app: NestExpressApplication): void {
   // Se registra aqui y no en el modulo para cubrir tambien las rutas inexistentes.
   const requestId = new RequestIdMiddleware();
   app.use(requestId.use.bind(requestId));
+  const accessLog = new AccessLogMiddleware();
+  app.use(accessLog.use.bind(accessLog));
   app.use(helmet());
 
   app.setGlobalPrefix('api', { exclude: ['health'] });

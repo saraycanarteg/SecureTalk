@@ -2,6 +2,7 @@ import { createHash, createHmac, createPrivateKey, KeyObject, randomUUID } from 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer, IncomingHttpHeaders, Server, ServerResponse } from 'node:http';
 import { join } from 'node:path';
+import { deflateSync } from 'node:zlib';
 
 import { Logger } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -610,6 +611,129 @@ describe('STEGO (e2e)', () => {
       const res = await result(analysis.analysis_id, await signToken(userId)).expect(503);
 
       expect(res.body).not.toHaveProperty('sha256');
+    });
+  });
+
+  describe('T12: bitacora de auditoria', () => {
+    const FILE_SECRET = 'CONTENIDO-SECRETO-DEL-ARCHIVO';
+    const NAME_SECRET = 'nombre-secreto';
+    const QUERY_SECRET = 'valor-secreto-en-la-url';
+
+    let lines: string[];
+    const logged = async () => {
+      // El registro de acceso se escribe al terminar la respuesta.
+      await new Promise((resolve) => setImmediate(resolve));
+      return lines.join('\n');
+    };
+
+    beforeEach(() => {
+      lines = [];
+      const capture = (...args: unknown[]) => {
+        lines.push(args.map(String).join(' '));
+      };
+      jest.spyOn(Logger.prototype, 'log').mockImplementation(capture);
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(capture);
+      jest.spyOn(Logger.prototype, 'error').mockImplementation(capture);
+    });
+
+    it('deja trazabilidad de accesos, analisis, rechazos, cuarentena y fallos de AUTH', async () => {
+      const userId = randomUUID();
+      const token = await signToken(userId);
+
+      await analyze().expect(401);
+      await analyze('token.invalido.x').expect(401);
+
+      handler = deny;
+      await analyze(token).expect(403);
+      handler = (_body, res) => sendJson(res, 500, {});
+      await analyze(token).expect(503);
+      handler = allow;
+
+      await analyze(token, CONTENT, {
+        filename: 'virus.exe',
+        contentType: 'image/png',
+      }).expect(415);
+      await analyze(token, CONTENT.subarray(0, 40)).expect(400);
+      await analyze(token, Buffer.alloc(MAX_FILE_SIZE + 1)).expect(413);
+
+      detector.analyze.mockResolvedValue({
+        ...DETECTOR_RESULT,
+        status: 'sospechoso',
+      });
+      const { body } = await analyze(token).expect(201);
+
+      await result(body.analysis_id, token).expect(200);
+      await result(body.analysis_id, await signToken(randomUUID())).expect(403);
+      await result(randomUUID(), token).expect(404);
+
+      const log = await logged();
+      for (const event of [
+        'acceso metodo=POST ruta=/api/steganography/analyze estado=401 userId=anonimo',
+        'token_rechazado motivo=ausente',
+        'authz_decision permitido=false',
+        'authz_no_disponible motivo=http_500',
+        'archivo_rechazado codigo=415',
+        'archivo_rechazado codigo=400',
+        'estado=413',
+        `analisis_registrado id=${body.analysis_id} userId=${userId}`,
+        `cuarentena_aplicada analisis=${body.analysis_id} userId=${userId}`,
+        `resultado_consultado analisis=${body.analysis_id} userId=${userId}`,
+        'acceso_ajeno_rechazado',
+        'resultado_inexistente',
+        `ruta=/api/steganography/results/${body.analysis_id} estado=200 userId=${userId}`,
+      ]) {
+        expect(log).toContain(event);
+      }
+    });
+
+    it('no registra JWT, claves, contenido de archivos ni datos de la URL', async () => {
+      const token = await signToken(randomUUID());
+      const [, payload, signature] = token.split('.');
+      const secretFile = assemblePng(
+        pngHeader(1, 1),
+        pngChunk('tEXt', Buffer.from(FILE_SECRET)),
+        pngChunk('IDAT', deflateSync(Buffer.from([0, 1, 2, 3]))),
+        pngChunk('IEND'),
+      );
+      const secretName = `${NAME_SECRET}.png`;
+      const png = { filename: secretName, contentType: 'image/png' };
+
+      await analyze(token, secretFile, png).expect(201);
+      await analyze(token, secretFile, { ...png, filename: `${NAME_SECRET}.exe` }).expect(415);
+      await server()
+        .post(`/api/steganography/analyze?clave=${QUERY_SECRET}`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('file', secretFile, png)
+        .expect(201);
+      handler = deny;
+      await analyze(token).expect(403);
+      handler = (_body, res) => sendJson(res, 500, {});
+      await analyze(token).expect(503);
+      await server()
+        .get('/api/steganography/results/no-es-uuid')
+        .set('Authorization', `Bearer ${token}x`)
+        .expect(401);
+
+      const log = await logged();
+      expect(log).toContain('analisis_registrado');
+      for (const secret of [
+        token,
+        payload,
+        signature,
+        SERVICE_KEY,
+        process.env.DB_PASSWORD as string,
+        FILE_SECRET,
+        NAME_SECRET,
+        QUERY_SECRET,
+      ]) {
+        expect(log).not.toContain(secret);
+      }
+    });
+
+    it('no llena la bitacora con el healthcheck', async () => {
+      await server().get('/health').expect(200);
+
+      expect(await logged()).not.toContain('ruta=/health');
     });
   });
 

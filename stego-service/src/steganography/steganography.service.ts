@@ -8,6 +8,7 @@ import {
   BadRequestException,
   ForbiddenException,
   HttpException,
+  HttpStatus,
   Inject,
   Injectable,
   Logger,
@@ -51,6 +52,7 @@ export class SteganographyService {
     context: AnalyzeContext,
   ): Promise<AnalysisResponseDto> {
     if (!file) {
+      this.logRejection(HttpStatus.BAD_REQUEST, 'Falta el archivo', context);
       throw new BadRequestException('Falta el archivo en el campo "file"');
     }
 
@@ -64,6 +66,7 @@ export class SteganographyService {
         size: file.size,
       });
       if (!validation.valid) {
+        this.logRejection(validation.statusCode, validation.reason, context);
         throw new HttpException(validation.reason, validation.statusCode);
       }
 
@@ -92,6 +95,11 @@ export class SteganographyService {
       this.logger.log(
         `analisis_registrado id=${analysis.id} userId=${analysis.userId} sha256=${analysis.sha256} estado=${analysis.status} accion=${analysis.action} requestId=${context.requestId}`,
       );
+      if (keepFile) {
+        this.logger.warn(
+          `cuarentena_aplicada analisis=${analysis.id} userId=${analysis.userId} sha256=${analysis.sha256} requestId=${context.requestId}`,
+        );
+      }
       return this.toResponse(analysis);
     } finally {
       if (!keepFile) {
@@ -103,6 +111,9 @@ export class SteganographyService {
   async getResult(id: string, context: AnalyzeContext): Promise<AnalysisResponseDto> {
     const analysis = await this.analyses.findOneBy({ id });
     if (!analysis) {
+      this.logger.warn(
+        `resultado_inexistente analisis=${id} userId=${context.userId} requestId=${context.requestId}`,
+      );
       throw new NotFoundException('Analisis no encontrado');
     }
 
@@ -112,7 +123,22 @@ export class SteganographyService {
       );
       throw new ForbiddenException('Operacion no autorizada');
     }
+
+    this.logger.log(
+      `resultado_consultado analisis=${id} userId=${context.userId} requestId=${context.requestId}`,
+    );
     return this.toResponse(analysis);
+  }
+
+  // JSON.stringify evita inyectar lineas en el log. El nombre del archivo nunca se registra.
+  private logRejection(
+    statusCode: number,
+    reason: string,
+    context: AnalyzeContext,
+  ) {
+    this.logger.warn(
+      `archivo_rechazado codigo=${statusCode} motivo=${JSON.stringify(reason)} userId=${context.userId} requestId=${context.requestId}`,
+    );
   }
 
   // Un fallo del detector es una clasificacion mas: queda registrado y el archivo se rechaza.
