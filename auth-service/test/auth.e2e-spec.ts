@@ -368,9 +368,9 @@ describe('AUTH (e2e)', () => {
       const res = await server().get('/api/docs-json').expect(200);
 
       expect(Object.keys(res.body.paths)).toEqual(
-        expect.arrayContaining(['/api/auth/login', '/api/auth/profile', '/health']),
+        expect.arrayContaining(['/api/auth/login', '/api/auth/profile', '/api/users', '/health']),
       );
-      expect(Object.keys(res.body.paths)).not.toContain('/api/users');
+      expect(Object.keys(res.body.paths)).not.toContain('/api/roles');
     });
   });
 });

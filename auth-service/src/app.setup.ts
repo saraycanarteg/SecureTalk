@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 import { AuthModule } from './auth/auth.module';
 import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware.js';
 import type { Env } from './config/env.schema.js';
+import { UsersModule } from './users/users.module';
 
 // Compartido entre main.ts y las pruebas e2e para probar la misma configuracion.
 export function configureApp(app: NestExpressApplication): void {
@@ -44,7 +45,7 @@ export function configureApp(app: NestExpressApplication): void {
   }
 }
 
-// Solo documenta lo implementado: los modulos de users y roles aun no se incluyen.
+// Solo documenta lo implementado: cada modulo se incluye cuando sus rutas funcionan.
 function setupSwagger(app: NestExpressApplication): void {
   const document = SwaggerModule.createDocument(
     app,
@@ -54,7 +55,7 @@ function setupSwagger(app: NestExpressApplication): void {
       .setVersion('1.0')
       .addBearerAuth()
       .build(),
-    { include: [AppModule, AuthModule] },
+    { include: [AppModule, AuthModule, UsersModule] },
   );
   SwaggerModule.setup('api/docs', app, document);
 }
