@@ -7,6 +7,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
 
 import { ErrorResponseDto } from '../auth/dto/auth-responses.dto';
@@ -16,6 +17,9 @@ import { ServiceKeyGuard } from './service-key.guard';
 
 @ApiTags('internal')
 @ApiSecurity('service-key')
+// Todo STEGO llega desde una IP: el limite global lo dejaria sin decisiones y responderia 503.
+// La proteccion aqui es la clave de servicio, de al menos 32 caracteres.
+@SkipThrottle()
 @UseGuards(ServiceKeyGuard)
 @Controller('internal/authorization')
 export class InternalAuthorizationController {
