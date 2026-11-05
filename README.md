@@ -7,6 +7,8 @@ Backend de una aplicación de salas de chat seguras, formado por dos microservic
 
 Cada servicio tiene su propio proceso, su configuración y su base de datos. El acuerdo entre ambos está en [docs/contrato-auth-stego.md](docs/contrato-auth-stego.md).
 
+La arquitectura y los límites de confianza están en [docs/arquitectura.md](docs/arquitectura.md).
+
 ## Puesta en marcha
 
 Requisitos: Docker con Docker Compose y Node.js.
